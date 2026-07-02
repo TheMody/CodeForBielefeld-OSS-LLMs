@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teaser — Open Source LLMs · Code for Bielefeld</title>
+<style>
+  :root {
+    --bg: #20232D;
+    --card: #2A2E3C;
+    --card2: #262A37;
+    --term: #14161E;
+    --termbrd: #3A3F52;
+    --coral: #FF867F;
+    --coraldk: #8A4A46;
+    --text: #EEF0F6;
+    --muted: #9AA3B8;
+    --faint: #6F7789;
+    --green: #8CD9A0;
+    --amber: #FFC66B;
+    --sans: "Segoe UI", Calibri, "Helvetica Neue", Arial, sans-serif;
+    --mono: Consolas, "Cascadia Mono", "SF Mono", Menlo, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    color: var(--text);
+    background:
+      radial-gradient(1100px 620px at 50% -12%, rgba(255,134,127,0.20), transparent 62%),
+      radial-gradient(900px 700px at 88% 108%, rgba(140,217,160,0.06), transparent 60%),
+      #12141b;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: auto;
+  }
+
+  #wrap { display: flex; align-items: center; justify-content: center; }
+
+  .poster {
+    width: 840px; height: 1188px;
+    background:
+      radial-gradient(1000px 560px at 50% -10%, rgba(255,134,127,0.16), transparent 60%),
+      var(--bg);
+    border: 1px solid #333849;
+    border-radius: 22px;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.55);
+    padding: 62px 64px 54px;
+    position: relative;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .kicker {
+    text-align: center;
+    font-size: 16px; font-weight: 700; letter-spacing: 0.22em;
+    color: var(--coral); text-transform: uppercase;
+  }
+
+  .logo { width: 172px; margin: 30px auto 4px; display: block; }
+
+  h1 {
+    text-align: center;
+    font-size: 74px; font-weight: 800; letter-spacing: -0.02em;
+    line-height: 1.02; margin-top: 20px;
+  }
+
+  .hook {
+    text-align: center;
+    font-size: 22px; line-height: 1.42; color: var(--muted);
+    max-width: 640px; margin: 22px auto 0;
+  }
+  .hook b { color: var(--text); font-weight: 600; }
+
+  .term {
+    background: var(--term); border: 1px solid var(--termbrd);
+    border-radius: 14px; padding: 16px 24px 18px; margin: 34px 0 0;
+  }
+  .term .bar { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+  .term .bar i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  .term .bar i:nth-child(1) { background: #FF6E67; }
+  .term .bar i:nth-child(2) { background: #FFC66B; }
+  .term .bar i:nth-child(3) { background: #8CD9A0; }
+  .term .bar span { font: 12px var(--mono); color: var(--faint); margin-left: 8px; }
+  .term pre { font: 15px/1.7 var(--mono); color: var(--text); white-space: pre-wrap; }
+  .term .p   { color: var(--coral); font-weight: 700; }
+  .term .out { color: var(--green); }
+  .term .mut { color: var(--muted); }
+  .term .com { color: var(--faint); }
+
+  .agenda-label {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.14em;
+    color: var(--faint); text-transform: uppercase; margin: 34px 0 16px;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .topic {
+    background: var(--card); border-radius: 13px; padding: 18px 20px;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .topic .hx { width: 34px; height: 31px; flex: 0 0 auto; margin-top: 2px; }
+  .topic .hx polygon { fill: none; stroke: var(--coral); stroke-width: 2.6; }
+  .topic .hx text { fill: var(--coral); font: 700 15px var(--mono); text-anchor: middle; }
+  .topic b { display: block; font-size: 17px; }
+  .topic span { font-size: 13.5px; color: var(--muted); line-height: 1.35; }
+
+  .foot { margin-top: auto; padding-top: 30px; }
+  .meta {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    font-size: 18px; color: var(--text); font-weight: 600;
+  }
+  .meta .dot { color: var(--coraldk); }
+  .meta .sub { color: var(--muted); font-weight: 400; font-size: 15px; }
+  .cta {
+    text-align: center; margin-top: 20px;
+    font-size: 21px; font-weight: 700; color: var(--coral);
+  }
+  .cta small {
+    display: block; margin-top: 8px;
+    font: 13.5px var(--mono); color: var(--faint); font-weight: 400;
+  }
+
+  @media print {
+    body { background: #12141b; }
+    .poster { box-shadow: none; border-radius: 0; }
+  }
+  @page { size: 210mm 297mm; margin: 0; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="poster">
+    <div class="kicker">Code for Bielefeld · Meetup</div>
+
+    <div class="logo">
+      <img src="CodeFor-bielefeld.svg" alt="Code for Bielefeld Logo">
+    </div>
+
+    <h1>Open Source LLMs</h1>
+
+    <p class="hook">Leistungsfähige KI auf <b>deinem eigenen Laptop</b> — keine Cloud,
+      kein API-Key, keine Daten verlassen den Raum.</p>
+
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i><span>live — ohne Internet</span></div>
+<pre><span class="p">$ </span>ollama run gemma4:e2b
+<span class="mut">&gt;&gt;&gt; Erkläre in 3 Sätzen, warum Bielefeld existiert.</span>
+<span class="out">Bielefeld existiert – und das lässt sich sogar lokal beweisen. _</span></pre>
+    </div>
+
+    <div class="agenda-label">Im Talk — mit Live-Demos</div>
+    <div class="grid">
+      <div class="topic">
+        <svg class="hx" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">1</text></svg>
+        <div><b>Modelle live auf 16 GB</b><span>Gemma 4 &amp; Qwen 3.6 auf einem ganz normalen Laptop</span></div>
+      </div>
+      <div class="topic">
+        <svg class="hx" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">2</text></svg>
+        <div><b>Quantisierung</b><span>Warum das auf deinem Laptop überhaupt läuft</span></div>
+      </div>
+      <div class="topic">
+        <svg class="hx" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">3</text></svg>
+        <div><b>Hardware &amp; Speed</b><span>Was kostet Geschwindigkeit? CPU, GPU, Mac &amp; Co.</span></div>
+      </div>
+      <div class="topic">
+        <svg class="hx" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">4</text></svg>
+        <div><b>Fine-Tuning mit LoRA</b><span>Modelle zuhause anpassen</span></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="meta">
+        <span>Juli 2026</span>
+        <span class="dot">·</span>
+        <span>Bielefeld</span>
+        <span class="dot">·</span>
+        <span class="sub">Termin &amp; Ort → Meetup</span>
+      </div>
+      <div class="cta">
+        Bring deinen Laptop mit — wir probieren alles live aus.
+        <small>ollama.com → in 5 Minuten startklar</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Scale the fixed poster to fit the viewport height while staying crisp.
+  function fit() {
+    var p = document.querySelector('.poster');
+    var s = Math.min(1, (window.innerHeight - 24) / 1188, (window.innerWidth - 24) / 840);
+    p.style.transform = 'scale(' + s + ')';
+    p.style.transformOrigin = 'center center';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+</script>
+</body>
+</html>

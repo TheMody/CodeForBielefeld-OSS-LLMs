@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "slides",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-3.13", "-m", "http.server", "8137"],
+      "port": 8137
+    }
+  ]
+}

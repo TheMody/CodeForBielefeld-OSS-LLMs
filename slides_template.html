@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Source LLMs — Code for Bielefeld</title>
+<style>
+  :root {
+    --bg: #20232D;
+    --card: #2A2E3C;
+    --card2: #262A37;
+    --term: #14161E;
+    --termbrd: #3A3F52;
+    --coral: #FF867F;
+    --coraldk: #8A4A46;
+    --text: #EEF0F6;
+    --muted: #9AA3B8;
+    --faint: #6F7789;
+    --green: #8CD9A0;
+    --amber: #FFC66B;
+    --red: #FF7B72;
+    --sans: "Segoe UI", Calibri, "Helvetica Neue", Arial, sans-serif;
+    --mono: Consolas, "Cascadia Mono", "SF Mono", Menlo, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0e0f14; overflow: hidden; }
+  body { font-family: var(--sans); color: var(--text); }
+
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #deck { width: 1280px; height: 720px; position: relative; flex: 0 0 auto; }
+
+  .slide {
+    position: absolute; inset: 0;
+    width: 1280px; height: 720px;
+    background: var(--bg);
+    padding: 48px 53px;
+    display: none;
+    overflow: hidden;
+    border-radius: 6px;
+  }
+  .slide.active { display: block; }
+
+  /* ---------- common ---------- */
+  .kicker { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .kicker .hex { width: 42px; height: 38px; flex: 0 0 auto; }
+  .kicker .hex polygon { fill: none; stroke: var(--coral); stroke-width: 2.4; }
+  .kicker .hex text { fill: var(--coral); font: 700 15px var(--mono); text-anchor: middle; }
+  .kicker .lbl { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+  h1.title { font-size: 40px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 26px; }
+
+  .pageno { position: absolute; right: 26px; bottom: 18px; font: 12px var(--mono); color: var(--faint); }
+
+  .card  { background: var(--card);  border-radius: 12px; }
+  .card2 { background: var(--card2); border-radius: 12px; }
+
+  .term { background: var(--term); border: 1px solid var(--termbrd); border-radius: 12px; padding: 14px 22px 16px; }
+  .term .bar { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .term .bar i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .term .bar i:nth-child(1) { background: #FF6E67; }
+  .term .bar i:nth-child(2) { background: #FFC66B; }
+  .term .bar i:nth-child(3) { background: #8CD9A0; }
+  .term .bar span { font: 11px var(--mono); color: var(--faint); margin-left: 8px; }
+  .term pre { font: 13.5px/1.65 var(--mono); color: var(--text); white-space: pre-wrap; }
+  .term .p   { color: var(--coral); font-weight: 700; }
+  .term .out { color: var(--green); }
+  .term .mut { color: var(--muted); }
+  .term .com { color: var(--faint); }
+  .term .amb { color: var(--amber); }
+
+  .cols { display: flex; gap: 24px; }
+  .grow { flex: 1 1 0; }
+
+  ul.dots { list-style: none; }
+  ul.dots li { position: relative; padding-left: 24px; margin-bottom: 15px; }
+  ul.dots li::before { content: ""; position: absolute; left: 0; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--coral); }
+  ul.dots b { display: block; font-size: 17px; }
+  ul.dots span { font-size: 14px; color: var(--muted); }
+
+  table { border-collapse: collapse; width: 100%; }
+  th { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--faint); text-align: left; text-transform: uppercase; padding: 8px 14px; }
+  td { font-size: 15px; padding: 11px 14px; color: var(--muted); }
+  td:first-child { color: var(--text); }
+  tbody tr:nth-child(odd) td { background: var(--card2); }
+  tbody tr:nth-child(odd) td:first-child { border-radius: 8px 0 0 8px; }
+  tbody tr:nth-child(odd) td:last-child  { border-radius: 0 8px 8px 0; }
+  .good { color: var(--green) !important; font-weight: 600; }
+  .bad  { color: var(--red)   !important; font-weight: 600; }
+  .warn { color: var(--amber) !important; font-weight: 600; }
+  .accent { color: var(--coral) !important; font-weight: 600; }
+  .mono { font-family: var(--mono); }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 18px;
+         font: 12px var(--mono); color: #566; user-select: none; z-index: 10; }
+  #hud b { color: #788; font-weight: 400; }
+  #notes { position: fixed; left: 50%; transform: translateX(-50%); bottom: 40px; width: min(900px, 90vw);
+           max-height: 38vh; overflow: auto; background: #101218ee; border: 1px solid var(--termbrd);
+           border-radius: 12px; padding: 18px 24px; font-size: 15px; line-height: 1.55; color: var(--muted);
+           display: none; z-index: 20; white-space: pre-line; }
+  #notes.on { display: block; }
+  #notes h3 { color: var(--coral); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+  aside.notes { display: none; }
+
+  /* ---------- print ---------- */
+  @media print {
+    html, body { overflow: visible; background: #fff; }
+    #stage { position: static; display: block; }
+    #deck { width: auto; height: auto; transform: none !important; }
+    .slide { display: block; position: relative; page-break-after: always; break-after: page; margin: 0; border-radius: 0; }
+    #hud, #notes { display: none !important; }
+  }
+  @page { size: 338.7mm 190.5mm; margin: 0; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="deck">
+
+<!-- ============================================================ 1 · TITLE -->
+<section class="slide">
+  <div style="display:flex; align-items:center; height:100%; gap:56px;">
+    <div style="flex:0 0 350px; display:flex; justify-content:center;">
+      <div style="width:330px;"><div class="logo">
+  <img src="CodeFor-bielefeld.svg" alt="Code for Bielefeld Logo">
+</div></div>
+    </div>
+    <div class="grow">
+      <div style="font-size:15px; font-weight:700; letter-spacing:.08em; color:var(--coral); margin-bottom:12px;">CODE FOR BIELEFELD · JULI 2026</div>
+      <div style="font-size:64px; font-weight:800; letter-spacing:-0.015em; line-height:1.05;">Open Source LLMs</div>
+      <div style="font-size:22px; color:var(--muted); margin-top:16px; line-height:1.4; max-width:660px;">
+        Capable AI on your own laptop — no cloud, no API key, no data leaving the room.</div>
+      <div style="font-size:14px; color:var(--faint); margin-top:14px;">Live demos throughout · Ollama · a normal 16&nbsp;GB laptop</div>
+      <div class="term" style="margin-top:30px; max-width:680px;">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e2b
+<span class="mut">&gt;&gt;&gt; Erkläre in 3 Sätzen, warum Bielefeld existiert.</span>
+<span class="out">Bielefeld existiert – und das lässt sich sogar lokal beweisen. _</span></pre>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">Setup before people arrive: terminal open, ollama serve running, models pre-pulled. This title slide stays up while people come in.
+Talk: 30–45 min + Q&amp;A, live demos on the 16 GB laptop.</aside>
+</section>
+
+<!-- ============================================================ 2 · HOOK -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">00</text></svg>
+    <span class="lbl">Hook · live demo first</span>
+  </div>
+  <h1 class="title">This just ran on this laptop</h1>
+  <div class="cols">
+    <div class="grow">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>live — no network needed</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e2b
+<span class="mut">&gt;&gt;&gt; Erkläre in 3 Sätzen, warum Bielefeld existiert.</span>
+
+<span class="out">Bielefeld existiert seit 1214 als Kaufmannsstadt am Übergang
+durch den Teutoburger Wald. Die Sparrenburg bewachte den Pass,
+die Leinenweber brachten den Handel. Dass die Stadt nicht
+existiere, ist nur ein Internet-Witz.</span>
+
+<span class="com"># gemma4:e2b · 2.3B params · ~2 GB · CPU only
+# ~40 tokens/s on this CPU — fast enough to read along</span></pre>
+      </div>
+      <div style="font-size:14px; font-style:italic; color:var(--faint); margin-top:12px;">Flugmodus an — die Demo läuft trotzdem.</div>
+    </div>
+    <div style="flex:0 0 380px; display:flex; flex-direction:column; gap:18px;">
+      <div class="card" style="padding:20px 24px;">
+        <div style="font-size:18px; font-weight:700;">Runs entirely on this laptop</div>
+        <div style="font-size:14px; color:var(--muted); margin-top:6px;">2 GB download · 16 GB consumer laptop · no GPU</div>
+      </div>
+      <div class="card" style="padding:20px 24px;">
+        <div style="font-size:18px; font-weight:700;">No cloud, no API key</div>
+        <div style="font-size:14px; color:var(--muted); margin-top:6px;">No account, no rate limits, no monthly bill</div>
+      </div>
+      <div class="card" style="padding:20px 24px;">
+        <div style="font-size:18px; font-weight:700; color:var(--coral);">No data leaves the room</div>
+        <div style="font-size:14px; color:var(--muted); margin-top:6px;">Privacy by construction — DSGVO-friendly</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">02</div>
+  <aside class="notes">Open with the live demo BEFORE any slides — run gemma4:e2b, ask it something fun in German (Gemma 4 supports 140+ languages).
+Land the point hard: this is running on THIS laptop. WiFi can be off.
+Fallback: screen recording of this exact demo.</aside>
+</section>
+
+<!-- ============================================================ 3 · OPEN -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">01</text></svg>
+    <span class="lbl">What “open” actually means</span>
+  </div>
+  <h1 class="title">“Open source LLM” usually means open weights</h1>
+  <div class="cols">
+    <div class="grow">
+      <div class="card" style="padding:16px 24px; margin-bottom:14px; display:flex; align-items:center; gap:18px;">
+        <div class="grow">
+          <div style="font-size:18px; font-weight:700;">Open weights</div>
+          <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">You get the trained parameters — download, run, fine-tune. This is what “open” means for almost every model.</div>
+        </div>
+        <span style="flex:0 0 auto; font:600 12px var(--mono); color:var(--green); background:var(--term); border-radius:14px; padding:6px 14px;">the norm</span>
+      </div>
+      <div class="card" style="padding:16px 24px; margin-bottom:14px; display:flex; align-items:center; gap:18px;">
+        <div class="grow">
+          <div style="font-size:18px; font-weight:700;">Open data</div>
+          <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">The training data is published. Very few models (e.g. OLMo-style research projects).</div>
+        </div>
+        <span style="flex:0 0 auto; font:600 12px var(--mono); color:var(--amber); background:var(--term); border-radius:14px; padding:6px 14px;">rare</span>
+      </div>
+      <div class="card" style="padding:16px 24px; display:flex; align-items:center; gap:18px;">
+        <div class="grow">
+          <div style="font-size:18px; font-weight:700;">Open training code</div>
+          <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">The full recipe to reproduce the model from scratch.</div>
+        </div>
+        <span style="flex:0 0 auto; font:600 12px var(--mono); color:var(--amber); background:var(--term); border-radius:14px; padding:6px 14px;">rare</span>
+      </div>
+      <div style="font-size:14.5px; margin-top:20px;"><b>Licenses still differ:</b>
+        <span style="color:var(--muted);"> Apache 2.0 (Qwen — do anything) · Gemma license · Llama license (usage terms attached)</span></div>
+    </div>
+    <div style="flex:0 0 400px;">
+      <div style="font-size:14px; font-weight:700; letter-spacing:.07em; color:var(--coral); margin-bottom:16px;">WHY CARE?</div>
+      <ul class="dots">
+        <li><b>Privacy — DSGVO!</b><span>Citizen data never leaves your machine</span></li>
+        <li><b>Cost &amp; offline</b><span>No per-token bill, works without internet</span></li>
+        <li><b>No vendor lock-in</b><span>The model file is yours, forever</span></li>
+        <li><b>Fine-tunable</b><span>Adapt it to your domain (→ LoRA, later)</span></li>
+      </ul>
+      <div style="font-size:14px; font-style:italic; color:var(--faint); margin-top:8px;">A very good fit for civic tech and public administration.</div>
+    </div>
+  </div>
+  <div class="pageno">03</div>
+  <aside class="notes">TODO before talk: double-check current Gemma license terms vs Apache 2.0.
+Point for this audience: “open weights” is the norm — you can run and fine-tune, but training data/recipe usually stay closed.
+Civic-tech angle: DSGVO + Verwaltung is the strongest why-care here.</aside>
+</section>
+
+<!-- ============================================================ 4 · LANDSCAPE -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">02</text></svg>
+    <span class="lbl">The landscape · mid-2026</span>
+  </div>
+  <h1 class="title">Who’s who in open models</h1>
+  <div class="cols">
+    <div class="card grow" style="padding:26px 32px;">
+      <div style="font-size:27px; font-weight:700;">Gemma 4</div>
+      <div style="font-size:14.5px; color:var(--coral); margin:4px 0 18px;">Google — “the multimodal generalist”</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">E2B · E4B · 12B Unified · 26B MoE · 31B</b><span>sizes for phone → workstation</span></li>
+        <li><b style="font-size:16px;">Multimodal</b><span>text + image (12B Unified also audio) · 256K context</span></li>
+        <li><b style="font-size:16px;">140+ languages</b><span>notably strong German</span></li>
+      </ul>
+    </div>
+    <div class="card grow" style="padding:26px 32px;">
+      <div style="font-size:27px; font-weight:700;">Qwen 3.6</div>
+      <div style="font-size:14.5px; color:var(--coral); margin:4px 0 18px;">Alibaba — “the coding monster”</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">27B dense</b><span>one size, tuned hard for code &amp; agents</span></li>
+        <li><b style="font-size:16px;">77.2% SWE-bench Verified</b><span>on par with frontier closed models</span></li>
+        <li><b style="font-size:16px;">Apache 2.0</b><span>the most permissive license there is</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="card2" style="margin-top:22px; padding:20px 32px; font-size:16px;">
+    <b>Also on the map:</b> <span style="color:var(--muted);">DeepSeek (open reasoning models) · Llama (Meta’s ecosystem) · Mistral (European, efficient)</span>
+  </div>
+  <div class="pageno">04</div>
+  <aside class="notes">TODO: pick current DeepSeek / Llama / Mistral versions to mention (one line each).
+Media idea: show the Ollama model library or HF leaderboard live if WiFi works — have a screenshot as fallback.</aside>
+</section>
+
+<!-- ============================================================ 5 · STORY -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">03</text></svg>
+    <span class="lbl">The real story</span>
+  </div>
+  <h1 class="title">From datacenter to laptop in six years</h1>
+  <div style="position:relative; margin:104px 30px 96px;">
+    <div style="position:absolute; left:0; right:0; top:7px; height:2px; background:var(--termbrd);"></div>
+    <div style="display:flex; justify-content:space-between;">
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2020</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--bg); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">GPT-3</div>
+        <div style="font-size:13.5px; color:var(--muted);">175B · closed</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">datacenter only</div>
+      </div>
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2023</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--bg); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">Llama 2</div>
+        <div style="font-size:13.5px; color:var(--muted);">70B · open-ish</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">workstation</div>
+      </div>
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2025</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--bg); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">Gemma 3 / Qwen 3</div>
+        <div style="font-size:13.5px; color:var(--muted);">4–32B · open</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">laptop</div>
+      </div>
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2026</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--coral); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">Gemma 4 E2B/E4B</div>
+        <div style="font-size:13.5px; color:var(--muted);">2–4B · open · multimodal</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">any laptop, even phones</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin:0 110px; padding:36px 44px; border:1.5px solid var(--coraldk); border-radius:16px;">
+    <div style="font-size:24px; font-weight:700; line-height:1.3;">Qwen 3.6-27B beats its own 397B predecessor on coding benchmarks</div>
+    <div style="margin-top:14px;"><span class="mono" style="font-size:18px; font-weight:700; color:var(--coral);">small + recent &nbsp;&gt;&nbsp; big + old</span>
+      <span style="font-size:15px; color:var(--muted);">&nbsp; — capability per parameter keeps climbing</span></div>
+  </div>
+  <div class="pageno">05</div>
+  <aside class="notes">THE story of the talk: capability got compressed into small models.
+Killer stat: Qwen3.6-27B beats its own 397B predecessor on coding benchmarks — small + recent &gt; big + old.</aside>
+</section>
+
+<!-- ============================================================ 6 · DEMO 1 -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">04</text></svg>
+    <span class="lbl">Live demo · small models on this laptop</span>
+  </div>
+  <h1 class="title">Same prompt, three sizes — watch tokens/sec</h1>
+  <div class="cols">
+    <div class="grow" style="display:flex; flex-direction:column; gap:18px;">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>demo 1 — size vs speed</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e2b --verbose "Schreibe eine
+<span class="mut">    Python-Funktion: Ist ein Jahr ein Schaltjahr?"</span>
+<span class="com"># … eval rate: ~XX tokens/s   ← measure live</span>
+
+<span class="p">$ </span>ollama run gemma4:e4b --verbose "…"
+<span class="p">$ </span>ollama run gemma4:12b --verbose "…"
+<span class="com"># speed drops, quality rises</span></pre>
+      </div>
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>demo 2 — vision</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e4b "Was ist auf diesem
+<span class="mut">    Bild zu sehen?" ./bielefeld-rathaus.jpg</span>
+<span class="com"># multimodal teaser — image in, answer out
+# gemma4 reads forms, timetables, handwriting</span></pre>
+      </div>
+    </div>
+    <div style="flex:0 0 400px; display:flex; flex-direction:column; gap:18px;">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>second terminal</span></div>
+        <pre><span class="p">$ </span>ollama ps
+<span class="mut">NAME         SIZE   PROC</span>
+<span class="out">gemma4:12b   8.1GB  100% CPU</span>
+<span class="com"># RAM footprint, live</span></pre>
+      </div>
+      <div class="card grow" style="padding:22px 26px;">
+        <div style="font-size:20px; font-weight:700; color:var(--amber);">The wall</div>
+        <div class="mono" style="font-size:14px; margin-top:12px;"><span style="color:var(--coral); font-weight:700;">$ </span>ollama pull qwen3.6:27b</div>
+        <div style="font-size:14.5px; color:var(--muted); margin-top:12px; line-height:1.5;">
+          Q4 weights alone ≈ 16&nbsp;GB — more than this laptop’s entire RAM.<br><br>
+          Doesn’t fit. Why? And what would?</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">06</div>
+  <aside class="notes">DEMO BLOCK 1 (~8 min). Pre-pull all models; close browsers so 12B fits; have screen recordings as fallback for every demo.
+Run the same prompt at 3 sizes with --verbose, watch tokens/sec drop and quality rise. Second terminal: ollama ps shows RAM footprint + 100% CPU.
+Then the wall: qwen3.6:27b Q4 is ~16GB weights alone → doesn’t fit → perfect segue to quantization &amp; hardware.
+Multimodal teaser: image of the Rathaus into gemma4:e4b.</aside>
+</section>
+
+<!-- ============================================================ 7 · NUMBERS -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">05</text></svg>
+    <span class="lbl">The numbers</span>
+  </div>
+  <h1 class="title">Speed vs. RAM vs. quality — measured here</h1>
+  <table>
+    <thead><tr><th>Model</th><th>Params</th><th>Quant</th><th>RAM</th><th>Tokens/s (this laptop)</th><th>Quality</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">gemma4:e2b</td><td>2.3B</td><td>Q4</td><td>~3 GB</td><td class="accent">→ measured live</td><td>fine for chat</td></tr>
+      <tr><td class="mono">gemma4:e4b</td><td>4B</td><td>Q4</td><td>~5 GB</td><td class="accent">→ measured live</td><td>good all-rounder</td></tr>
+      <tr><td class="mono">gemma4:12b</td><td>12B</td><td>Q4</td><td>~8 GB</td><td class="accent">→ measured live</td><td>noticeably better</td></tr>
+      <tr><td class="mono">qwen3.6:27b</td><td>27B</td><td>Q4</td><td>~17 GB</td><td class="bad">doesn’t fit</td><td>—</td></tr>
+      <tr><td class="mono">qwen3.6:27b <span style="color:var(--muted);">(rented GPU)</span></td><td>27B</td><td>Q8</td><td>30–60 GB</td><td class="good">30–60 t/s</td><td>frontier coding</td></tr>
+    </tbody>
+  </table>
+  <div class="card" style="margin-top:24px; padding:22px 30px;">
+    <div style="font-size:16px; font-weight:700; color:var(--coral);">Rule of thumb</div>
+    <div class="mono" style="font-size:19px; font-weight:700; margin-top:10px;">RAM &nbsp;≈&nbsp; parameters × bytes per weight &nbsp;+&nbsp; context overhead</div>
+    <div style="font-size:14.5px; color:var(--muted); margin-top:10px;">FP16 = 2 bytes/param · Q4 ≈ 0.5 bytes/param &nbsp;→&nbsp; a 27B model: 54 GB in FP16, ~15 GB in Q4</div>
+  </div>
+  <div class="pageno">07</div>
+  <aside class="notes">TODO: run test_token_speeds.py beforehand and fill in the real tokens/s numbers + your quality ratings (build the table from YOUR measurements — more credible than benchmark screenshots). Show the script briefly.
+TODO: decide the big-hardware story — rent a GPU for real Qwen 3.6 numbers, or use published benchmarks.
+Verify gemma4:12b actually runs OK in 16GB (close browsers!).</aside>
+</section>
+
+<!-- ============================================================ 8 · FORMULA -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">06</text></svg>
+    <span class="lbl">Hardware</span>
+  </div>
+  <h1 class="title">One formula explains the entire market</h1>
+  <div class="term" style="text-align:center; padding:26px; border-color:var(--coraldk);">
+    <span class="mono" style="font-size:26px; font-weight:700; color:var(--coral);">tokens/s &nbsp;≈&nbsp; memory bandwidth &nbsp;÷&nbsp; model size in bytes</span>
+  </div>
+  <div style="text-align:center; font-size:15px; color:var(--muted); margin:18px 0 44px;">
+    Generating one token reads every weight once — inference is memory-bound, not compute-bound.</div>
+  <div style="max-width:1120px;">
+    <div class="bw"><span>Laptop CPU · DDR5</span><div class="track"><div style="width:4.4%;  background:var(--muted);"></div><b>100 GB/s</b></div></div>
+    <div class="bw"><span>Ryzen AI Max 395 · unified</span><div class="track"><div style="width:11.1%; background:var(--muted);"></div><b>256 GB/s</b></div></div>
+    <div class="bw"><span>Mac M4 Max · unified</span><div class="track"><div style="width:23.8%; background:var(--muted);"></div><b>546 GB/s</b></div></div>
+    <div class="bw"><span>RTX 3090 · GDDR6X</span><div class="track"><div style="width:40.7%; background:var(--coral);"></div><b>936 GB/s</b></div></div>
+    <div class="bw"><span>RTX 5090 · GDDR7</span><div class="track"><div style="width:78%;  background:var(--coral);"></div><b>1792 GB/s</b></div></div>
+  </div>
+  <style>
+    .bw { display:flex; align-items:center; gap:16px; margin-bottom:18px; }
+    .bw > span { flex:0 0 250px; text-align:right; font-size:14.5px; }
+    .bw .track { flex:1; display:flex; align-items:center; gap:12px; }
+    .bw .track div { height:26px; border-radius:6px; flex:0 0 auto; }
+    .bw b { font: 700 14px var(--mono); white-space:nowrap; }
+  </style>
+  <div style="margin-top:32px; margin-left:266px; font-size:14.5px;">
+    <b>On this laptop:</b> <span class="mono" style="color:var(--muted);">4B Q4 ≈ 40 t/s — pleasant &nbsp;&nbsp;·&nbsp;&nbsp; 27B Q4 ≈ 6 t/s — painful</span></div>
+  <div class="pageno">08</div>
+  <aside class="notes">The one formula that explains the whole hardware market. LLM generation is memory-bandwidth-bound, not compute-bound: every generated token reads all weights once.
+CPU dual-channel DDR5 ~100GB/s → 4B Q4 (~2.5GB) at ~40 t/s is pleasant; 27B Q4 (~16GB) at ~6 t/s is painful.
+Optional demo: ollama ps shows 100% CPU here; screenshot of the same on a GPU box showing 100% GPU + the t/s difference.</aside>
+</section>
+
+<!-- ============================================================ 9 · BUYER'S TABLE -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">07</text></svg>
+    <span class="lbl">Hardware · what does speed cost?</span>
+  </div>
+  <h1 class="title">The buyer’s table (mid-2026)</h1>
+  <table style="font-size:14px;">
+    <thead><tr><th>Option</th><th>Memory</th><th>Bandwidth</th><th>Price</th><th>Sweet spot</th><th>Qwen 27B?</th></tr></thead>
+    <tbody>
+      <tr><td><b>This laptop (CPU)</b></td><td>16 GB shared</td><td>100 GB/s</td><td>owned</td><td>≤ 4B models</td><td class="bad">no</td></tr>
+      <tr><td><b>Used RTX 3090</b></td><td>24 GB VRAM</td><td>936 GB/s</td><td>€600–700</td><td>best t/s per €</td><td class="good">yes · fast</td></tr>
+      <tr><td><b>RTX 5090</b></td><td>32 GB VRAM</td><td>1792 GB/s</td><td>€2,600+</td><td>70B Q4, 45+ t/s</td><td class="good">yes · v. fast</td></tr>
+      <tr><td><b>Ryzen AI Max+ 395</b></td><td>128 GB unified</td><td>256 GB/s</td><td>€1,500–2,000</td><td>big models, slowly</td><td class="warn">yes · medium</td></tr>
+      <tr><td><b>Mac Studio</b></td><td>512 GB unified</td><td>546–819 GB/s</td><td>€2,500+</td><td>70B @ 20–30 t/s</td><td class="good">yes · fast</td></tr>
+      <tr><td><b>Rented GPU (vast.ai)</b></td><td>any</td><td>any</td><td>€0.30–0.70/h</td><td>try before buying</td><td class="good">yes</td></tr>
+    </tbody>
+  </table>
+  <div class="cols" style="margin-top:26px;">
+    <div class="card grow" style="padding:18px 22px;">
+      <div style="font-size:15.5px; font-weight:700; color:var(--coral);">Used 3090 = the Geheimtipp</div>
+      <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">same 24 GB as a 4090 at ⅓ the price</div>
+    </div>
+    <div class="card grow" style="padding:18px 22px;">
+      <div style="font-size:15.5px; font-weight:700; color:var(--coral);">Beware the VRAM cliff</div>
+      <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">doesn’t fit in VRAM → speed falls off a cliff</div>
+    </div>
+    <div class="card grow" style="padding:18px 22px;">
+      <div style="font-size:15.5px; font-weight:700; color:var(--coral);">CPU is fine ≤ 4B</div>
+      <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">that’s the revolution — not the €3,000 GPU</div>
+    </div>
+  </div>
+  <div class="pageno">09</div>
+  <aside class="notes">Prices are mid-2026 street prices, approximate. TODO: refresh shortly before the talk — GPU prices move fast.
+TODO: check rent-vs-buy break-even (at ~€0.50/h a used 3090 pays for itself after roughly 1,300 hours).
+Talking points: used RTX 3090 = the community Geheimtipp (~€1,200 total build). The VRAM cliff: if the model doesn’t fit in VRAM it spills to system RAM and speed falls off a cliff. And: CPU is fine for small models — that’s the real revolution, not the €3,000 GPU.</aside>
+</section>
+
+<!-- ============================================================ 10 · QUANTIZATION -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">08</text></svg>
+    <span class="lbl">Quantization</span>
+  </div>
+  <h1 class="title">JPEG for neural networks</h1>
+  <div class="cols" style="margin-top:20px;">
+    <div class="grow">
+      <div style="font-size:19px; line-height:1.5; max-width:540px;">Weights are just numbers. Quantization stores them with fewer bits — lossy, like JPEG, but you barely notice.</div>
+      <div class="mono" style="font-size:15.5px; font-weight:700; color:var(--coral); margin-top:26px;">FP16 → Q4 = 4× smaller, ~same answers</div>
+    </div>
+    <div style="flex:0 0 620px;">
+      <div style="display:flex; font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--faint); margin-bottom:10px;">
+        <span style="flex:0 0 64px;"></span><span style="flex:1;">SIZE (4B MODEL)</span><span style="flex:0 0 170px;">QUALITY</span></div>
+      <div class="qrow"><span>FP16</span><div style="flex:1;"><div class="qb" style="width:100%; background:var(--termbrd);"></div><i>8.0 GB · reference</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:100%; background:var(--muted);"></div></div></div>
+      <div class="qrow"><span>Q8</span><div style="flex:1;"><div class="qb" style="width:54%; background:var(--termbrd);"></div><i style="color:var(--green);">4.3 GB · indistinguishable</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:100%; background:var(--green);"></div></div></div>
+      <div class="qrow"><span>Q4</span><div style="flex:1;"><div class="qb" style="width:30%; background:var(--termbrd);"></div><i style="color:var(--coral);">2.4 GB · sweet spot ← use this</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:98%; background:var(--coral);"></div></div></div>
+      <div class="qrow"><span>Q2</span><div style="flex:1;"><div class="qb" style="width:19%; background:var(--termbrd);"></div><i style="color:var(--red);">1.5 GB · visibly degraded</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:84%; background:var(--red);"></div></div></div>
+      <style>
+        .qrow { display:flex; align-items:flex-start; gap:14px; margin-bottom:27px; }
+        .qrow > span { flex:0 0 50px; text-align:right; font:700 15px var(--mono); padding-top:2px; }
+        .qb { height:20px; border-radius:5px; margin-bottom:4px; }
+        .qrow i { font-size:12.5px; font-style:italic; color:var(--muted); }
+      </style>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:52px;">
+    <div class="term grow">
+      <div class="bar"><i></i><i></i><i></i><span>demo — q8 vs q4</span></div>
+      <pre><span class="p">$ </span>ollama pull gemma4:e2b-it-q8_0    <span class="com"># vs default q4_K_M</span>
+<span class="com"># same prompt on both → compare RAM, speed, output
+# spoiler: you will not spot the difference</span></pre>
+    </div>
+    <div class="card2" style="flex:0 0 400px; padding:20px 26px;">
+      <div style="font-size:16px; font-weight:700;">Under the hood</div>
+      <div style="font-size:14px; color:var(--muted); margin-top:8px; line-height:1.55;">
+        GGUF = the quantized model file format.<br>llama.cpp = the engine beneath Ollama.</div>
+    </div>
+  </div>
+  <div class="pageno">10</div>
+  <aside class="notes">Intuition first: weights are just numbers; quantization stores them sloppier. JPEG analogy carries the whole section.
+Live if time: same model in q4 and q8 → compare speed, RAM, and (usually) barely different output. An over-quantized Q2 model giving worse answers is more memorable than any chart.
+Mention: GGUF file format, llama.cpp is the engine underneath Ollama.
+Media idea: 3Blue1Brown clips for “weights are numbers” intuition; perplexity-vs-quant chart from llama.cpp docs.</aside>
+</section>
+
+<!-- ============================================================ 11 · INFERENCE VS TRAINING -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">09</text></svg>
+    <span class="lbl">Inference vs. training</span>
+  </div>
+  <h1 class="title">You can run it. You cannot train it.</h1>
+  <div class="cols">
+    <div class="grow">
+      <div style="font-size:12.5px; font-weight:700; letter-spacing:.06em; color:var(--faint); margin-bottom:18px;">MEMORY FOR A 4B MODEL</div>
+      <div style="position:relative; padding-right:20px;">
+        <div class="mrow"><span>Inference Q4</span><div style="width:5%; background:var(--green);"></div><b style="color:var(--green);">2.5 GB — easy</b></div>
+        <div class="mrow"><span>Inference FP16</span><div style="width:16%; background:var(--muted);"></div><b style="color:var(--muted);">8 GB — tight</b></div>
+        <div class="mrow"><span style="color:var(--amber);">Full training</span>
+          <div style="width:16%; background:#C4655F; border-radius:5px 0 0 5px;"></div>
+          <div style="width:16%; background:var(--coral); border-radius:0;"></div>
+          <div style="width:32%; background:var(--amber); border-radius:0;"></div>
+          <div style="width:36%; background:#FFE3A3; border-radius:0 5px 5px 0;"></div>
+          <b style="color:var(--red);">50+ GB — no</b></div>
+        <div style="display:flex; gap:18px; margin:10px 0 0 190px; font-size:12.5px; color:var(--muted); flex-wrap:wrap;">
+          <span><i class="sq" style="background:#C4655F;"></i>weights 8</span>
+          <span><i class="sq" style="background:var(--coral);"></i>gradients 8</span>
+          <span><i class="sq" style="background:var(--amber);"></i>optimizer 16</span>
+          <span><i class="sq" style="background:#FFE3A3;"></i>activations 18+</span>
+        </div>
+        <style>
+          .mrow { display:flex; align-items:center; margin-bottom:22px; }
+          .mrow > span { flex:0 0 150px; font-size:15px; font-weight:700; }
+          .mrow div { height:22px; }
+          .mrow div:first-of-type { margin-left:40px; border-radius:5px; }
+          .mrow b { font: 700 13.5px var(--mono); margin-left:10px; white-space:nowrap; }
+          .sq { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+        </style>
+      </div>
+      <div style="font-size:14.5px; color:var(--muted); margin-top:30px;">Training a 27B: ~350+ GB → multi-GPU cluster.</div>
+      <div class="card" style="margin-top:28px; padding:40px 30px; text-align:center; border:1px solid var(--coraldk); border-radius:16px;">
+        <div style="font-size:21px; font-weight:700;">Inference is reading the book.</div>
+        <div style="font-size:21px; font-weight:700; color:var(--coral); margin-top:6px;">Training is writing it.</div>
+      </div>
+    </div>
+    <div style="flex:0 0 470px;">
+      <div style="font-size:12.5px; font-weight:700; letter-spacing:.06em; color:var(--faint); margin-bottom:18px;">WHY THE GAP?</div>
+      <div class="card2" style="padding:24px; margin-bottom:20px;">
+        <div style="font-size:16.5px; font-weight:700;">10–20× the memory of Q4 inference</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">backprop keeps gradients + Adam states + activations alongside the weights</div>
+      </div>
+      <div class="card2" style="padding:24px; margin-bottom:20px;">
+        <div style="font-size:16.5px; font-weight:700;">Training can’t be 4-bit</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">tiny gradient updates vanish in coarse number formats — precision is required</div>
+      </div>
+      <div class="card2" style="padding:24px;">
+        <div style="font-size:16.5px; font-weight:700;">And it’s compute, too</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">Gemma-class pretraining: thousands of GPUs for weeks — this laptop: centuries</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">11</div>
+  <aside class="notes">The core math slide. Training needs weights + gradients + Adam optimizer states + activations ≈ 10–20× the memory of quantized inference — and it can’t be aggressively quantized because tiny gradient updates vanish in 4-bit.
+Compute side: Gemma-class pretraining = thousands of GPUs × weeks.
+TODO: fun back-of-envelope — “training Gemma 4 on this laptop ≈ X years” (FLOPs of pretraining ÷ laptop FLOPs).
+Media idea: datacenter photo vs this laptop, side by side.</aside>
+</section>
+
+<!-- ============================================================ 12 · LORA -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">10</text></svg>
+    <span class="lbl">The loophole</span>
+  </div>
+  <h1 class="title">Fine-tuning at home: LoRA</h1>
+  <div class="cols" style="margin-top:26px;">
+    <div class="grow">
+      <div style="display:flex; align-items:center; gap:20px;">
+        <div class="card" style="flex:0 0 260px; padding:24px; text-align:center;">
+          <div style="font-size:19px; font-weight:700;">Base model</div>
+          <div style="font-size:13px; color:var(--muted); margin-top:3px;">4B params · quantized</div>
+          <div class="mono" style="background:var(--term); border-radius:9px; padding:10px; margin:14px 24px 8px; font-weight:700; color:var(--muted); letter-spacing:.1em;">FROZEN</div>
+          <div style="font-size:12.5px; font-style:italic; color:var(--faint);">0% trained</div>
+        </div>
+        <div style="font-size:34px; font-weight:700; color:var(--coral);">+</div>
+        <div style="text-align:center;">
+          <div style="background:var(--coral); color:var(--bg); border-radius:10px; width:84px; padding:14px 0; font-size:22px; font-weight:800;">A</div>
+          <div style="background:var(--coral); color:var(--bg); border-radius:10px; width:84px; padding:14px 0; font-size:22px; font-weight:800; margin-top:12px;">B</div>
+          <div style="font-size:12px; color:var(--muted); margin-top:10px; line-height:1.35;">two tiny matrices<br>~0.1–1% of params</div>
+        </div>
+        <div style="font-size:34px; font-weight:700; color:var(--coral);">=</div>
+        <div class="card" style="flex:0 0 190px; padding:24px 18px; text-align:center; border:1.5px solid var(--coral);">
+          <div style="font-size:18px; font-weight:700;">Your model</div>
+          <div style="font-size:13px; color:var(--muted); margin-top:6px;">custom style,<br>same brain</div>
+        </div>
+      </div>
+      <div style="font-size:15px; margin-top:46px; line-height:1.5;">
+        <b style="color:var(--coral);">QLoRA:</b> <span style="color:var(--muted);">train on top of the quantized base → Gemma 4 E4B fine-tunes in ~8–12 GB — a free Colab T4 is enough (Unsloth).</span></div>
+      <div class="card2" style="margin-top:24px; padding:20px 24px; font-size:14.5px;">
+        <b>Demo LoRA idea:</b> <span style="color:var(--muted);">Gemma antwortet auf Bielefelder Platt — oder in astreinem Amtsdeutsch. Trained before the talk, shown live in Ollama.</span></div>
+    </div>
+    <div style="flex:0 0 320px; display:flex; flex-direction:column; gap:22px;">
+      <div class="card" style="padding:26px 28px; flex:1;">
+        <div style="font-size:16px; font-weight:700; color:var(--green); margin-bottom:10px;">LoRA can</div>
+        <div style="font-size:15px; line-height:1.75;">style &amp; tone<br>output format<br>domain vocabulary</div>
+      </div>
+      <div class="card" style="padding:26px 28px; flex:1;">
+        <div style="font-size:16px; font-weight:700; color:var(--red); margin-bottom:10px;">LoRA can’t</div>
+        <div style="font-size:15px; line-height:1.75;">new knowledge at scale<br>new capabilities</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">12</div>
+  <aside class="notes">Bridge: “…but there IS a trick to customize models at home.”
+LoRA: freeze the base weights, train two tiny low-rank matrices on the side (~0.1–1% of params). QLoRA = same on a quantized base → fine-tuning Gemma 4 E4B fits in ~8–12 GB / free Colab T4.
+Demo plan: train the LoRA BEFORE the talk (don’t train live — too slow, too fragile), show the Unsloth notebook briefly, demo the result in Ollama.
+TODO: decide the fun dataset + build it (~100–500 examples is enough for a style LoRA): Bielefelder Platt / Amtsdeutsch / CfB style.</aside>
+</section>
+
+<!-- ============================================================ 13 · CAPABILITIES -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">11</text></svg>
+    <span class="lbl">Capabilities</span>
+  </div>
+  <h1 class="title">Pick the model for the task — not the biggest one</h1>
+  <div class="cols">
+    <div class="card grow" style="padding:24px 30px;">
+      <div style="font-size:20px; font-weight:700;">Gemma 4 — sees, hears, speaks German</div>
+      <div style="font-size:14px; font-style:italic; color:var(--coral); margin:4px 0 18px;">the multimodal generalist</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">Photo of a paper form → JSON</b><span>scan forms into structured data, fully local</span></li>
+        <li><b style="font-size:16px;">140+ languages, strong German</b><span>12B Unified adds audio input</span></li>
+        <li><b style="font-size:16px;">DSGVO-clean by design</b><span>the civic-tech / Verwaltung sweet spot</span></li>
+      </ul>
+    </div>
+    <div class="card grow" style="padding:24px 30px;">
+      <div style="font-size:20px; font-weight:700;">Qwen 3.6 — writes serious code</div>
+      <div style="font-size:14px; font-style:italic; color:var(--coral); margin:4px 0 18px;">the specialist coder</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">77.2% SWE-bench Verified</b><span>real repository bugs, frontier-level</span></li>
+        <li><b style="font-size:16px;">Same task, side by side</b><span>Gemma E4B struggles — Qwen nails it (demo)</span></li>
+        <li><b style="font-size:16px;">Local GitHub Copilot</b><span>plug into Cline or aider — private code stays private</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="card2" style="margin-top:22px; padding:20px 32px; font-size:16px;">
+    <b>Honorable mentions:</b> <span style="color:var(--muted);">Whisper (speech→text, runs anywhere) · small embedding models (local RAG) · DeepSeek-R1-style reasoning</span>
+  </div>
+  <div class="pageno">13</div>
+  <aside class="notes">Message: pick the model for the task, not the biggest one.
+Gemma demo: photo of a paper form / Fahrplan / handwritten note → extract structured JSON, fully local → “DSGVO-clean form scanning” is the civic-tech hook.
+Qwen demo (recorded from bigger hardware or via API): a real coding task both models attempt — Gemma E4B struggles, Qwen nails it.
+TODO: verify Qwen 3.6 27B is really text-only (some sources list MMMU scores → suggests vision?).
+Optional if time: Qwen plugged into Cline/aider = “local GitHub Copilot”.</aside>
+</section>
+
+<!-- ============================================================ 14 · WRAP-UP -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">12</text></svg>
+    <span class="lbl">Wrap-up</span>
+  </div>
+  <h1 class="title">Three things to take home</h1>
+  <div class="cols">
+    <div class="grow" style="display:flex; flex-direction:column; gap:16px;">
+      <div class="card" style="padding:18px 26px; display:flex; align-items:center; gap:20px;">
+        <svg class="hex" style="width:46px; height:42px; flex:0 0 auto;" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20" style="fill:none; stroke:var(--coral); stroke-width:2.4;"/><text x="22" y="26" style="fill:var(--coral); font:700 17px var(--mono); text-anchor:middle;">1</text></svg>
+        <div><div style="font-size:17.5px; font-weight:700;">Capable LLMs run on normal laptops — today</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">Quantization (Q4) makes it possible; small recent models beat big old ones</div></div>
+      </div>
+      <div class="card" style="padding:18px 26px; display:flex; align-items:center; gap:20px;">
+        <svg class="hex" style="width:46px; height:42px; flex:0 0 auto;" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20" style="fill:none; stroke:var(--coral); stroke-width:2.4;"/><text x="22" y="26" style="fill:var(--coral); font:700 17px var(--mono); text-anchor:middle;">2</text></svg>
+        <div><div style="font-size:17.5px; font-weight:700;">Inference is cheap. Training is astronomical.</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">LoRA / QLoRA is the middle path — customize a model on a free Colab</div></div>
+      </div>
+      <div class="card" style="padding:18px 26px; display:flex; align-items:center; gap:20px;">
+        <svg class="hex" style="width:46px; height:42px; flex:0 0 auto;" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20" style="fill:none; stroke:var(--coral); stroke-width:2.4;"/><text x="22" y="26" style="fill:var(--coral); font:700 17px var(--mono); text-anchor:middle;">3</text></svg>
+        <div><div style="font-size:17.5px; font-weight:700;">Model choice = task fit</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">Gemma 4 for multimodal &amp; German · Qwen 3.6 for code · size vs. speed</div></div>
+      </div>
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>try it yourself — tonight</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e4b        <span class="com"># ollama.com</span>
+<span class="com"># one command → running in 5 minutes</span></pre>
+      </div>
+    </div>
+    <div class="card" style="flex:0 0 370px; padding:26px 30px; border:1px solid var(--coraldk); border-radius:16px; display:flex; flex-direction:column;">
+      <div style="font-size:21px; font-weight:700; line-height:1.3;">A project for<br>Code for Bielefeld?</div>
+      <ul class="dots" style="margin-top:22px;">
+        <li><b style="font-size:15px;">Local document AI</b><span style="font-size:13px;">paper forms → structured data</span></li>
+        <li><b style="font-size:15px;">RAG over the Ratsinformationssystem</b><span style="font-size:13px;">ask the city council’s documents</span></li>
+        <li><b style="font-size:15px;">All DSGVO-clean</b><span style="font-size:13px;">runs on hardware we own</span></li>
+      </ul>
+      <div style="font-size:14.5px; font-style:italic; color:var(--coral); margin-top:auto;">Interested? Let’s talk after.</div>
+    </div>
+  </div>
+  <div class="pageno">14</div>
+  <aside class="notes">Wrap-up, ~2 min. Land the three takeaways, then the invitation: ollama.com, one command, running in five minutes.
+Close with the Code for Bielefeld project idea: local document processing or RAG over the Ratsinformationssystem — collect hands/interest for a follow-up evening.</aside>
+</section>
+
+<!-- ============================================================ 15 · THANKS -->
+<section class="slide">
+  <div style="display:flex; flex-direction:column; align-items:center; height:100%; padding-top:26px;">
+    <div style="width:210px;">{{LOGO}}</div>
+    <div style="font-size:46px; font-weight:800; margin-top:26px;">Danke! — Questions?</div>
+    <div style="font-size:16px; font-style:italic; color:var(--coral); margin-top:12px;">The terminal is still open — ask, and we’ll try it live.</div>
+    <div style="display:flex; gap:70px; margin-top:44px;">
+      <div>
+        <div style="font-size:11.5px; font-weight:700; letter-spacing:.08em; color:var(--faint); margin-bottom:10px;">SOURCES</div>
+        <div class="src">Google — Gemma 4 announcement (blog.google)</div>
+        <div class="src">Unsloth — Gemma 4 fine-tuning docs (unsloth.ai)</div>
+        <div class="src">Ollama model library (ollama.com/library)</div>
+        <div class="src">The Decoder — Qwen 3.6-27B vs its 397B predecessor</div>
+      </div>
+      <div style="padding-top:21px;">
+        <div class="src">llm-stats.com — Qwen 3.6 27B benchmarks</div>
+        <div class="src">corelab.tech — LLM GPU buyer's guide (Apr 2026)</div>
+        <div class="src">modemguides.com — Ryzen AI Max 395 reality check</div>
+        <div class="src">pinggy.io — hardware for self-hosting LLMs, 2026</div>
+      </div>
+    </div>
+    <style>.src { font-size:13px; color:var(--muted); margin-bottom:8px; }</style>
+  </div>
+  <aside class="notes">Q&amp;A. Sources listed for the follow-up email / repo.
+Have the terminal still open — best Q&amp;A answers are live demos.</aside>
+</section>
+
+</div></div>
+
+<div id="hud"><span><b>←/→</b> slides</span><span><b>F</b> fullscreen</span><span><b>N</b> notes</span><span id="counter"></span></div>
+<div id="notes"><h3>Speaker notes</h3><div id="notesbody"></div></div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var deck = document.getElementById('deck');
+  var counter = document.getElementById('counter');
+  var notesEl = document.getElementById('notes');
+  var notesBody = document.getElementById('notesbody');
+  var i = 0;
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('active', k === i); });
+    if (history.replaceState) history.replaceState(null, '', '#' + (i + 1));
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    var a = slides[i].querySelector('aside.notes');
+    notesBody.textContent = a ? a.textContent.trim() : '(no notes)';
+  }
+  function fit() {
+    var s = Math.min(window.innerWidth / 1300, window.innerHeight / 760);
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') { show(i + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') { show(i - 1); e.preventDefault(); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen();
+    }
+    else if (e.key === 'n' || e.key === 'N') notesEl.classList.toggle('on');
+  });
+  document.getElementById('stage').addEventListener('click', function (e) {
+    if (window.getSelection().toString()) return;
+    show(e.clientX > window.innerWidth / 2 ? i + 1 : i - 1);
+  });
+  window.addEventListener('resize', fit);
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isNaN(h) ? 0 : h - 1);
+})();
+</script>
+</body>
+</html>
