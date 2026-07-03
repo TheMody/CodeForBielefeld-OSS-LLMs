@@ -1,0 +1,41 @@
+[project]
+name = "oss-llms-demos"
+version = "0.1.0"
+description = "Live-demo experiments for the 'Open Source LLMs' talk @ Code for Bielefeld"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # --- Ollama demos (hook, speed, quantization, vision, coding) ---
+    "requests>=2.31",
+    "ollama>=0.3",
+    "pillow>=10.0",       # vision demo: load/resize images
+    "rich>=13.0",         # pretty terminal output for live demos
+    # --- LoRA fine-tuning stack (HF; runs on CPU, faster on GPU) ---
+    "torch>=2.2",
+    "datasets>=2.18",
+    "huggingface-hub>=0.23",
+    "transformers>=4.44",
+    "peft>=0.11",
+    "trl>=0.9",
+    "accelerate>=0.30",
+]
+
+# 4-bit QLoRA (bitsandbytes) only works on an NVIDIA GPU. Install it with:
+#   uv sync --extra gpu
+# On this CPU-only laptop the training script falls back to a plain LoRA.
+[project.optional-dependencies]
+gpu = [
+    "bitsandbytes>=0.43",
+]
+
+[tool.uv]
+package = false
+
+# Torch: CPU wheels by default so the venv installs anywhere without CUDA.
+# For a GPU box, point this index at the cu121/cu124 wheel instead.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }

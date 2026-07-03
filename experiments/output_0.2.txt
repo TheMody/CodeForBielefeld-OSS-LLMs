@@ -1,0 +1,166 @@
+philipkenneweg@philipkenneweg-Laptop:~/Documents/CodeForBielefeld-OSS-LLMs$ uv run experiments/02_token_speed.py 
+Prompt: Ich habe eine Verletzung am Knie. Ich bin 27 Jahre alt. Mein Knie tut weh wenn ich drauf drücke. Das Gelenk fühlt sich aber gut an. Woran könnte es liegen?
+
+
+============================================================
+gemma4:e2b
+============================================================
+**Wichtiger Hinweis vorab:** Ich bin ein großes Sprachmodell und kann keine medizinische Diagnose stellen oder ärztlichen Rat ersetzen. Die folgenden Informationen dienen lediglich der allgemeinen Orientierung. **Bei einer Verletzung oder anhaltenden Schmerzen müssen Sie unbedingt einen Arzt (Orthopäden oder Sportmediziner) aufsuchen, um eine korrekte Diagnose und eine geeignete Behandlung zu erhalten.**
+
+Da ich keinen direkten körperlichen Befund vornehmen kann, ist es unmöglich, die genaue Ursache Ihrer Beschwerden festzustellen. Die Tatsache, dass das Gelenk selbst gut anfühlt, aber beim Drücken Schmerzen entstehen, deutet darauf hin, dass die Ursache möglicherweise in den umliegenden Strukturen liegt.
+
+Hier sind einige mögliche Ursachen, die Schmerzen beim Drücken im Knie verursachen können:
+
+### Mögliche Ursachen für Druckschmerz im Knie
+
+**1. Probleme mit Sehnen und Bändern (Tendinopathie/Bänderreizung):**
+*   **Patellofemorale Schmerzen (PFPS):** Dies ist eine sehr häufige Ursache, besonders wenn die Schmerzen um den Kniescheibe herum auftreten. Die Belastung der Kniescheibe auf den Oberschenkelknochen kann zu Schmerzen führen, die oft beim Drücken oder Treppensteigen verstärkt werden.
+*   **Tendinitis (Sehnenentzündung):** Entzündungen der Sehnen, die das Knie stabilisieren (z.B. Patellasehne), können Schmerzen verursachen, wenn diese strukturell komprimiert werden.
+
+**2. Probleme mit Weichteilen und Kapsel:**
+*   **Bursitis:** Entzündung der Sehnenbeutel, die Flüssigkeit im Gelenk umgibt. Eine Entzündung kann bei Druck zu Schmerzen führen.
+*   **Gelenkkapselveränderungen:** Bei älteren Verletzungen oder Arthrose können sich die umliegenden Strukturen verändern und bei Druck schmerzhaft reagieren.
+
+**3. Knochen- oder Knorpelprobleme (weniger wahrscheinlich, wenn das Gelenk "gut" fühlt):**
+*   **Knorpelschäden:** Wenn der Knorpel an den Rändern des Gelenks beschädigt ist, kann Druck auf diese Stellen schmerzhaft sein.
+*   **Arthrose (Gelenkverschleiß):** Auch wenn das Gelenk selbst noch funktioniert, können Verschleißerscheinungen zu Schmerzen bei Belastung führen.
+
+### Was Sie jetzt tun sollten
+
+Um die genaue Ursache festzustellen und eine angemessene Behandlung zu beginnen, ist der Gang zum Arzt unerlässlich.
+
+**Warten Sie nicht ab! Suchen Sie einen Termin bei:**
+
+1.  **Hausarzt:** Für eine erste Einschätzung und Überweisung.
+2.  **Orthopäden:** Spezialisten für Knochen, Gelenke und Muskulatur.
+3.  **Sportmediziner/Physiotherapeuten:** Diese können spezifische Bewegungsübungen und Therapiepläne erstellen, um die Ursache zu beheben.
+
+**Bis zum Arztbesuch sollten Sie folgende Maßnahmen beachten (ohne ärztlichen Rat):**
+
+*   **Schonen:** Vermeiden Sie Aktivitäten, die den Schmerz verstärken (insbesondere das Drücken).
+*   **Kühlen (falls Entzündung vermutet wird):** Bei akuten Verletzungen kann Kälte helfen, die Entzündung zu reduzieren.
+*   **Belastung anpassen:** Achten Sie darauf, wie Sie Ihr Knie belasten und bewegen, um unnötige Belastungen zu vermeiden.
+
+# 15.4 tok/s, 1279 tokens
+
+============================================================
+gemma4:e4b
+============================================================
+***WICHTIGER HINWEIS: Ich bin ein KI-Sprachmodell und kein Arzt. Eine genaue Diagnose ist unmöglich, da ich Sie nicht untersuchen kann. Die folgenden Informationen dienen lediglich der Aufklärung über mögliche Ursachen. Sie müssen unbedingt einen Orthopäden oder Physiotherapeuten aufsuchen, um die Ursache festzustellen und eine Behandlung zu beginnen.***
+
+Es ist sehr wichtig, dass Sie einen Arzt konsultieren, damit das Knie richtig untersucht werden kann (ggf. durch Belastungstests, bildgebende Verfahren wie Ultraschall oder MRT).
+
+---
+
+## 🔍 Analyse der Symptome
+
+Die Tatsache, dass Ihr Knie bei Druck schmerzt, aber sich ansonsten "gut anfühlt" (also ein normaler Bewegungsradius möglich ist und keine akute Instabilität vorliegt), deutet oft darauf hin, dass es sich nicht um einen kompletten Bandriss oder eine gravierende Schleudertrauma handelt.
+
+Der Schmerz bei Druck kann auf Reizungen der **weichen Strukturen** (Bänder, Sehnen) oder des darunterliegenden Knochens/Knorpels hindeuten, die durch Überlastung irritiert sind. Da Sie 27 Jahre alt sind, ist meist eine Belastungsproblematik im Vordergrund zu sehen.
+
+## 📌 Mögliche Ursachen für Ihren Schmerz (Listen nicht abschließend!)
+
+Hier sind einige der häufigsten Ursachen, die bei jungen Erwachsenen auftreten und welche Symptome passen könnten:
+
+### 1. Sehnenentzündungen (Tendinopathien)
+Dies ist eine der häufigsten Ursachen bei sportlich aktiven Menschen. Die Entzündung betrifft nicht das Gelenk selbst, sondern die daran anliegenden Sehnen.
+
+*   **Patellarlachgauss-Syndrom (Jumper's Knee):** Schmerzen sind meist direkt unter oder um die Kniescheibe lokalisiert und werden durch Springen, Treppensteigen oder langes Stehen verstärkt. Der Druck auf dieses Areal löst den Schmerz oft aus.
+*   **IT-Band-Syndrom (Iliotibiale Band):** Die Reibung des Bandes an der Oberschenkelaußenseite kann zu lokalisierten Schmerzen führen, die beim Gehen oder Belastung akut werden.
+
+### 2. Knorpelreizungen und Overuse Syndromes
+Wenn der Schmerz bei Druck auftritt, könnte das Problem in der Art liegen, wie Ihr Körper das Gewicht auf das Gelenk verteilt (Biomechanik).
+
+*   **Patellofemoraler Schmerz:** Dies ist eine diffuse Reibung zwischen Kniescheiben und Oberschenkelknochen. Es gibt keine „richtige“ Diagnose dafür, aber es äußert sich typischerweise als Druckschmerz um die Kniescheibe herum, der besonders nach langer sitzender Belastung oder beim Treppensteigen zunimmt.
+*   **Knorpelschaden/Arthrose (frühzeitig):** Auch bei jungen Menschen kann durch eine fehlerhafte Belastung oder Überlastung ein Reibungsknorpel betroffen sein, was zu Schmerzen unter Druck führen kann.
+
+### 3. Bursa-Entzündungen (Bursitis)
+Die Schleimbeutel (Burse) dienen als Polster zwischen Knochen und Sehnen. Wenn sie reizen oder entzünden, werden sie sehr druckempfindlich. Ein Arzt kann das durch vorsichtiges Ertasten feststellen.
+
+### 4. Muskuläre Dysbalancen und Haltung
+Manchmal ist der Schmerz kein Problem *im* Kniegelenk, sondern ein sekundäres Problem:
+
+*   **Schwache Gesäßmuskulatur (Glutealmuskulatur):** Wenn die Hüfte nicht stabilisiert werden kann, muss das Knie mehr arbeiten. Dies verändert die Belastung und führt zu chronischer Reizung der umliegenden Strukturen.
+*   **Spannung im Quadrizeps/Hamstrings:** Verkürzte Muskeln ziehen übermäßig an den Knochenstrukturen und erzeugen eine Fehlbelastung auf dem Kniegelenk.
+
+---
+
+## 🌿 Was Sie bis zum Arztbesuch tun können (Erste Maßnahmen)
+
+Bis Sie einen Termin beim Spezialisten haben, helfen folgende allgemeine Verhaltensänderungen:
+
+1.  **Aktiv vermeiden:** Vermeiden Sie Sportarten, die Sprünge, schnelle Richtungswechsel oder starkes Trampeln erfordern (Laufen auf Beton/Treppensteigen).
+2.  **Kälteanwendung:** Kühlen Sie das betroffene Knie mehrmals täglich für 15–20 Minuten. Dies reduziert Entzündungen und Schwellungen.
+3.  **Belastung reduzieren:** Tragen Sie Schuhe, die gut stützen (keine Absätze, keine flachen Flip-Flops). Versuchen Sie vorübergehend das Knie so wenig wie möglich zu überlasten.
+4.  **Dehnung & Stärkung (vorsichtig!):** Arbeiten Sie an der Kräftigung Ihrer Beinmuskulatur und der Hüfte, aber **nur wenn diese Bewegungen schmerzfrei sind**. *Achtung:* Wenn Dehnungsübungen Schmerzen auslösen, stoppen Sie sofort.
+
+## ⚠️ Wann müssen Sie SOFORT handeln? (Red Flags)
+
+Bitte suchen Sie sofort medizinische Hilfe auf, wenn zusätzlich zu den Druckschmerzen folgende Symptome auftreten:
+
+*   **Akute, starke Schwellung:** Das Knie ist plötzlich sehr dick und fühlt sich heiß an.
+*   **Inkapsulation/Blockade:** Sie können das Knie nicht mehr durch seinen vollen Bewegungsumfang beugen oder strecken.
+*   **Unsicherheit:** Sie haben das Gefühl, dass Ihr Bein „wegknickt“ oder instabil ist (Akute Instabilität).
+*   **Taubheitsgefühle:** Gefühlsstörungen im Unterschenkel oder Fuß auftreten.
+
+# 8.8 tok/s, 1924 tokens
+
+============================================================
+gemma4:12b
+============================================================
+**Wichtiger Hinweis vorab:** Ich bin eine KI und kein Arzt. Meine Antwort dient der Information und ersetzt keine medizinische Diagnose oder Behandlung durch einen Fachmann. Wenn du starke Schmerzen, eine Schwellung oder Instabilität hast, solltest du zeitnah einen Orthopäden oder Sportmediziner aufsuchen.
+
+Dass dein Knie sich "gut anfühlt" (also wahrscheinlich stabil ist, nicht blockiert und sich glatt bewegt), aber bei Druck schmerzt, deutet oft darauf hin, dass die **Hauptstrukturen** (die großen Bänder wie Kreuzbänder oder die Menisken) vermutlich keine schweren Risse haben, aber eine lokale Reizung vorliegt.
+
+Hier sind einige Möglichkeiten, was die Ursache für den Druckschmerz sein könnte:
+
+### 1. Sehnenreizung (Tendinitis)
+Dies ist bei jungen, aktiven Menschen sehr häufig. Wenn der Schmerz direkt unter oder über der Kniescheibe liegt, könnte es eine Reizung der Patellasehne sein.
+*   **Warum es passt:** Die Gelenkmechanik bleibt perfekt erhalten, aber die Sehnenstruktur reagiert auf Belastung oder eine punktuelle Überlastung mit Entzündungszeichen.
+
+### 2. Schleimbeutelentzündung (Bursitis)
+Zwischen Knochen und Weichteilen liegen kleine Taschen (Schleimbeutel), die als Polster dienen. Wenn einer dieser Becher entzündet ist, verursacht er einen sehr spezifischen Druckschmerz an einer exakten Stelle.
+*   **Warum es passt:** Das Gelenk selbst funktioniert einwandfrei, aber der "Polsterbereich" reagiert empfindlich auf Druck.
+
+### 3. Meniskusreizung (nicht unbedingt ein Riss)
+Ein kleinerer Riss oder eine chronische Reizung des Meniskus kann sich als Druckschmerz äußung. Wenn es kein großer Riss ist, der das Gelenk blockiert, fühlt sich das Knie beim Bewegen "gut" an, aber punktueller Druck auf die Meniskuswahrnehmung verursacht Schmerz.
+
+### 4. Patellofemorales Schmerzsyndrom (Läuferknie)
+Hierbei handelt es sich um eine Reizung der Knorpelfläche hinter oder um die Kniescheibe herum, oft durch Fehlstellungen oder Überlastung.
+*   **Warum es passt:** Es ist ein "Reibungsschmerz", der oft bei Belastung oder punktuellem Druck auftritt, während das Gelenk stabil bleibt.
+
+### 5. Prellung oder Weichteiltrauma
+Falls die Verletzung durch einen Sturz oder Stoß passiert ist, könnte es sich um eine einfache Prellung des Gewebes oder eine Hämatom-Bildung im Gewebe handeln.
+*   **Warum es passt:** Die Struktur ist intakt, aber das Gewebe isterregt.
+
+---
+
+### Was du jetzt tun kannst und worauf du achten solltest:
+
+1.  **Beobachte die Symptome:**
+    *   Wird das Knie warm oder rot? (Hinweis auf Entzündung)
+    *   Schwillt es an?
+    *   Tritt der Schmerz nur bei Druck auf oder auch beim Treppensteigen/Laufen?
+2.  **PECH-Regel:** In der Akutphase nach einer Verletzung hilft meist die PECH-Regel (Pause, Eis, Compression, Hochlagern).
+3.  **Belastung anpassen:** Vermeide Übungen, bei denen das Knie stark gebeugt wird oder unter hoher Last steht (z.B. tiefe Kniebeugen), bis du Klarheit hast.
+
+### Wann solltest du zum Arzt?
+Du solltest definitiv einen Orthopäden aufsuchen, wenn:
+*   Das Knie **anschwillt**.
+*   Es sich **"blockiert"** anfühlt oder instabil wirkt.
+*   Der Schmerz beim Treppensteigen oder Gehen deutlich zunimmt.
+*   Die Schmerzen trotz Schonung nach 1-2 Wochen nicht besser werden.
+
+**Zusammenfassend:** Da das Gelenk "gut" läuft, ist die Wahrscheinlichkeit für einen schweren Band- oder Meniskusriss eher gering, aber eine **Sehnenreizung oder eine Schleimbeutelentzündung** sind sehr wahrscheinliche Kandidaten für den punktuellen Druckschmerz.
+
+# 3.7 tok/s, 1583 tokens
+
+====================================================
+MODEL               SPEED           OUTPUT          
+----------------------------------------------------
+gemma4:e2b          15.4 tok/s      1279 tokens     
+gemma4:e4b          8.8 tok/s       1924 tokens     
+gemma4:12b          3.7 tok/s       1583 tokens     
+====================================================
+
+Expect: speed drops and quality rises as the model gets bigger.

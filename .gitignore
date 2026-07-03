@@ -1,0 +1,11 @@
+# uv / python
+.venv/
+__pycache__/
+*.pyc
+
+# HF datasets/models cache is large — keep the small built dataset only
+experiments/lora/adapter/
+experiments/assets/*.png
+
+# keep the built dataset (it's small and demo-critical)
+!experiments/lora/data/train.jsonl
