@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Source LLMs — Code for Bielefeld</title>
+<style>
+  :root {
+    --bg: #20232D;
+    --card: #2A2E3C;
+    --card2: #262A37;
+    --term: #14161E;
+    --termbrd: #3A3F52;
+    --coral: #FF867F;
+    --coraldk: #8A4A46;
+    --text: #EEF0F6;
+    --muted: #9AA3B8;
+    --faint: #6F7789;
+    --green: #8CD9A0;
+    --amber: #FFC66B;
+    --red: #FF7B72;
+    --sans: "Segoe UI", Calibri, "Helvetica Neue", Arial, sans-serif;
+    --mono: Consolas, "Cascadia Mono", "SF Mono", Menlo, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0e0f14; overflow: hidden; }
+  body { font-family: var(--sans); color: var(--text); }
+
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #deck { width: 1280px; height: 720px; position: relative; flex: 0 0 auto; }
+
+  .slide {
+    position: absolute; inset: 0;
+    width: 1280px; height: 720px;
+    background: var(--bg);
+    padding: 48px 53px;
+    display: none;
+    overflow: hidden;
+    border-radius: 6px;
+  }
+  .slide.active { display: block; }
+
+  /* ---------- common ---------- */
+  .kicker { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .kicker .hex { width: 42px; height: 38px; flex: 0 0 auto; }
+  .kicker .hex polygon { fill: none; stroke: var(--coral); stroke-width: 2.4; }
+  .kicker .hex text { fill: var(--coral); font: 700 15px var(--mono); text-anchor: middle; }
+  .kicker .lbl { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+  h1.title { font-size: 40px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 26px; }
+
+  .pageno { position: absolute; right: 26px; bottom: 18px; font: 12px var(--mono); color: var(--faint); }
+
+  .card  { background: var(--card);  border-radius: 12px; }
+  .card2 { background: var(--card2); border-radius: 12px; }
+
+  .term { background: var(--term); border: 1px solid var(--termbrd); border-radius: 12px; padding: 14px 22px 16px; }
+  .term .bar { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .term .bar i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .term .bar i:nth-child(1) { background: #FF6E67; }
+  .term .bar i:nth-child(2) { background: #FFC66B; }
+  .term .bar i:nth-child(3) { background: #8CD9A0; }
+  .term .bar span { font: 11px var(--mono); color: var(--faint); margin-left: 8px; }
+  .term pre { font: 13.5px/1.65 var(--mono); color: var(--text); white-space: pre-wrap; }
+  .term .p   { color: var(--coral); font-weight: 700; }
+  .term .out { color: var(--green); }
+  .term .mut { color: var(--muted); }
+  .term .com { color: var(--faint); }
+  .term .amb { color: var(--amber); }
+
+  .cols { display: flex; gap: 24px; }
+  .grow { flex: 1 1 0; }
+
+  ul.dots { list-style: none; }
+  ul.dots li { position: relative; padding-left: 24px; margin-bottom: 15px; }
+  ul.dots li::before { content: ""; position: absolute; left: 0; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--coral); }
+  ul.dots b { display: block; font-size: 17px; }
+  ul.dots span { font-size: 14px; color: var(--muted); }
+
+  table { border-collapse: collapse; width: 100%; }
+  th { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--faint); text-align: left; text-transform: uppercase; padding: 8px 14px; }
+  td { font-size: 15px; padding: 11px 14px; color: var(--muted); }
+  td:first-child { color: var(--text); }
+  tbody tr:nth-child(odd) td { background: var(--card2); }
+  tbody tr:nth-child(odd) td:first-child { border-radius: 8px 0 0 8px; }
+  tbody tr:nth-child(odd) td:last-child  { border-radius: 0 8px 8px 0; }
+  .good { color: var(--green) !important; font-weight: 600; }
+  .bad  { color: var(--red)   !important; font-weight: 600; }
+  .warn { color: var(--amber) !important; font-weight: 600; }
+  .accent { color: var(--coral) !important; font-weight: 600; }
+  .mono { font-family: var(--mono); }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 18px;
+         font: 12px var(--mono); color: #566; user-select: none; z-index: 10; }
+  #hud b { color: #788; font-weight: 400; }
+  #notes { position: fixed; left: 50%; transform: translateX(-50%); bottom: 40px; width: min(900px, 90vw);
+           max-height: 38vh; overflow: auto; background: #101218ee; border: 1px solid var(--termbrd);
+           border-radius: 12px; padding: 18px 24px; font-size: 15px; line-height: 1.55; color: var(--muted);
+           display: none; z-index: 20; white-space: pre-line; }
+  #notes.on { display: block; }
+  #notes h3 { color: var(--coral); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+  aside.notes { display: none; }
+
+  /* ---------- print ---------- */
+  @media print {
+    html, body { overflow: visible; background: #fff; }
+    #stage { position: static; display: block; }
+    #deck { width: auto; height: auto; transform: none !important; }
+    .slide { display: block; position: relative; page-break-after: always; break-after: page; margin: 0; border-radius: 0; }
+    #hud, #notes { display: none !important; }
+  }
+  @page { size: 338.7mm 190.5mm; margin: 0; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="deck">
+
+<!-- ============================================================ 1 · TITLE -->
+<section class="slide">
+  <div style="display:flex; align-items:center; height:100%; gap:56px;">
+    <div style="flex:0 0 350px; display:flex; justify-content:center;">
+      <div style="width:330px;"><svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg"
+     xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" x="0px" y="0px"
+     style="enable-background:new 0 0 162 162;" xml:space="preserve" id="svg1491"
+     sodipodi:docname="CodeFor-bielefeld.svg" inkscape:version="0.92.3 (2405546, 2018-03-11)"
+     viewBox="18.2 7.9 125.2 144">
+    <defs id="defs1495"></defs>
+    
+    <style type="text/css" id="style1274">	.st0{fill:#FF867F;}	.st1{fill:none;stroke:#FFFFFF;stroke-width:2;stroke-miterlimit:10;}	.st2{display:none;}	.st3{fill:#FFFFFF;}	.st4{fill:none;stroke:#FFFFFF;stroke-miterlimit:10;}	.st5{opacity:0;fill:none;stroke:#FFFFFF;stroke-width:2;stroke-miterlimit:10;}	.st6{fill:#FFFFFF;stroke:#FFFFFF;stroke-width:0.6;stroke-miterlimit:10;}</style>
+    <g id="Ebene_7" style="display:inline"></g>
+    <g id="Ebene_1" style="display:inline">	<g id="g1281">		<polygon class="st0"
+                                                                              points="28.4,110.1 28.4,49.7 80.9,19.4 133.4,49.7 133.4,110.1 80.9,140.4 "
+                                                                              id="polygon1277"
+                                                                              style="display:inline;fill:#ff867f"></polygon>
+        <path class="st0"
+              d="m 80.9,31 42.5,24.5 v 48.9 L 80.9,128.9 38.4,104.4 V 55.5 L 80.9,31 m 0,-23.1 -62.5,36 v 72 l 62.5,36 62.5,-36 v -72 z"
+              id="path1279" inkscape:connector-curvature="0" style="display:inline;fill:#ff867f"></path>	</g>
+        <polygon class="st1" points="81.1,147.7 22.6,113.8 22.6,46.2 81.1,12.3 139.6,46.2 139.6,113.8 " id="polygon1283"
+                 style="display:inline;fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polygon>
+        <g id="g1289" style="display:inline">		<rect x="95.699997" y="107.8" class="st0" width="1.4" height="1.9"
+                                                           id="rect1285" style="fill:#ff867f"></rect>
+            <polygon class="st0" points="97.1,109.7 97.1,107.8 95.7,107.8 95.7,109.7 " id="polygon1287"
+                     style="fill:#ff867f"></polygon>	</g>
+        <g id="g1295" style="display:inline">		<rect x="97.400002" y="126.7" class="st0" width="1.1" height="1.1"
+                                                           id="rect1291" style="fill:#ff867f"></rect>
+            <polygon class="st0" points="98.4,127.7 98.4,126.7 97.4,126.7 97.4,127.7 " id="polygon1293"
+                     style="fill:#ff867f"></polygon>	</g></g>
+    <g id="Ebene_3" class="st2" style="display:inline"></g>
+    <g id="Festes" style="display:inline"></g>
+    <g id="Bielefeld_x5F_Pfade" style="display:inline">	<polyline class="st1"
+                                                                     points="141.7,115.4 141.7,115.4 110.5,79.7 140.8,44.9 140.8,44.9  "
+                                                                     id="polyline1300"
+                                                                     style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+        <polyline class="st1" points="142.1,64.1 128.5,79.7 142.1,95.3  " id="polyline1302"
+                  style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+        <g id="g1366">		<g id="g1340">			<g id="g1338">				<path class="st3"
+                                                                                            d="m 77.5,43.4 c -0.3,-0.2 -0.5,-0.2 -0.7,-0.2 -0.4,0 -0.7,0.3 -0.7,0.8 v 0.3 h 1.8 V 45 h -1.8 v 3.8 H 75.4 V 45 h -1.3 v -0.7 h 1.3 V 44 c 0,-1.1 0.5,-1.5 1.4,-1.5 0.4,0 0.7,0.1 0.9,0.3 z"
+                                                                                            id="path1304"
+                                                                                            inkscape:connector-curvature="0"
+                                                                                            style="fill:#ffffff"></path>
+            <path class="st3"
+                  d="m 81.1,44.2 c 1.4,0 2.2,1.1 2.2,2.3 0,1.2 -0.8,2.3 -2.2,2.3 -1.4,0 -2.2,-1.1 -2.2,-2.3 0,-1.2 0.9,-2.3 2.2,-2.3 m 0,4 c 0.9,0 1.4,-0.8 1.4,-1.6 0,-0.9 -0.5,-1.6 -1.4,-1.6 -0.9,0 -1.5,0.8 -1.5,1.6 0.1,0.8 0.6,1.6 1.5,1.6"
+                  id="path1306" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+            <path class="st3"
+                  d="m 87.7,45.7 c -0.1,-0.5 -0.3,-0.8 -0.9,-0.8 -0.8,0 -1.5,0.7 -1.5,2.3 v 1.6 h -0.8 v -4.5 h 0.8 v 0.8 c 0.3,-0.5 0.9,-0.9 1.7,-0.9 0.9,0 1.4,0.5 1.5,1.5 z"
+                  id="path1308" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+            <g id="g1336">					<polygon class="st3"
+                                                       points="76.1,38.7 76.3,38.7 76.5,38.7 76.5,29.1 75.3,29.1 75.3,29.2 75.3,38.7 "
+                                                       id="polygon1310" style="fill:#ffffff"></polygon>
+                <path class="st3"
+                      d="m 80,39.6 c 0.1,0 0.2,-0.1 0.2,-0.2 V 28.2 C 80.2,28.1 80.1,28 80,28 h -3.8 c -0.1,0 -0.1,0 -0.1,0.1 v 0.2 0.8 c 0,0.1 0,0.2 0.1,0.2 h 2.6 c 0.1,0 0.2,0.1 0.2,0.1 v 8.9 c 0,0.1 -0.1,0.2 -0.2,0.2 h -2.6 c -0.1,0 -0.1,0 -0.1,0.1 v 0.2 0.8 c 0,0.1 0,0.2 0.1,0.2 H 80 Z"
+                      id="path1312" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <polygon class="st3" points="83,38.7 83,29.1 81.7,29.1 81.7,29.2 81.7,38.7 82.8,38.7 " id="polygon1314"
+                         style="fill:#ffffff"></polygon>
+                <path class="st3"
+                      d="m 82.8,39.6 v -1.2 c 1.7,0 2.8,-2.1 2.8,-4.6 0,-2.5 -1.2,-4.6 -2.8,-4.6 V 28 c 2.3,0 4,2.6 4,5.8 0,3.2 -1.7,5.8 -4,5.8"
+                      id="path1316" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 70.3,35.9 v 1.7 0.5 c 0,0.9 0.6,1.5 1.5,1.5 h 0.2 0.7 0.9 c 0,0 0.1,-0.1 0.1,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 H 72.6 72.2 72 c -0.4,0 -0.5,-0.2 -0.5,-0.6 V 37.5 36 35.1 c 0,-0.9 -0.4,-1.2 -0.8,-1.4 0.5,-0.2 0.8,-0.5 0.8,-1.4 v -0.6 -1.6 -0.4 c 0,-0.4 0.1,-0.6 0.5,-0.6 h 0.3 0.4 0.9 c 0,0 0.1,-0.1 0.1,-0.2 V 28 c 0,-0.1 -0.1,-0.2 -0.2,-0.2 h -0.7 -0.7 -0.4 c -0.9,0 -1.5,0.6 -1.5,1.5 v 0.7 2 c 0,0 0,0.5 -0.1,0.6 -0.1,0.4 -0.6,0.8 -0.9,0.8 h -0.5 c -0.1,0 -0.1,0.1 -0.1,0.1 v 0.9 c 0,0.1 0,0.2 0.1,0.2 h 0.4 c 0.4,0 0.9,0.3 0.9,0.8 0.3,0.1 0.3,0.5 0.3,0.5"
+                      id="path1318" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 76.3,28 h -0.4 -0.5 c -0.1,0 -0.1,0.1 -0.1,0.2 v 0.3 0.6 0.2 h 0.1 0.9 0.2 V 29.1 28.2 28 Z"
+                      id="path1320" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 75.3,38.6 v 0.4 0.5 c 0,0.1 0,0.2 0.1,0.2 h 0.3 0.6 0.2 v -0.2 -0.9 -0.1 h -0.2 -0.9 -0.1 c 0,-0.1 0,0.1 0,0.1 z"
+                      id="path1322" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 82.8,28 h -0.4 -0.5 c -0.1,0 -0.1,0.1 -0.1,0.2 v 0.3 0.6 0.2 h 0.1 0.9 0.2 V 29.1 28.2 28 Z"
+                      id="path1324" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 81.7,38.6 v 0.4 0.5 c 0,0.1 0,0.2 0.1,0.2 h 0.3 0.6 0.3 v -0.2 -0.9 -0.1 h -0.2 -0.9 -0.1 v 0.1 z"
+                      id="path1326" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 89.3,35.9 v 1.7 0.5 c 0,0.9 0.6,1.5 1.5,1.5 h 0.2 0.7 0.9 c 0,0 0.1,-0.1 0.1,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 H 91.6 91.2 91 c -0.4,0 -0.5,-0.2 -0.5,-0.6 V 37.5 36 35.1 c 0,-0.3 -0.1,-0.6 -0.2,-0.7 h -2 c 0.6,0.2 0.8,0.3 0.9,0.8 0.1,0.4 0.1,0.7 0.1,0.7"
+                      id="path1328" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 89.2,32.6 c -0.1,0.4 -0.4,0.6 -0.8,0.8 h 1.9 c 0.1,-0.3 0.2,-0.5 0.2,-0.9 v -0.6 -1.6 -0.4 c 0,-0.4 0.1,-0.6 0.5,-0.6 h 0.3 0.4 0.9 c 0,0 0.1,-0.1 0.1,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 h -0.7 -0.7 -0.4 c -0.9,0 -1.5,0.6 -1.5,1.5 v 0.4 2 c 0.1,-0.1 0.1,0.4 0,0.6"
+                      id="path1330" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 89.5,33.9 c 0.3,0.1 0.6,0.3 0.8,0.6 h 2.2 c 0.1,0 0.2,-0.1 0.2,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 h -2.3 c -0.1,0.3 -0.4,0.5 -0.7,0.6"
+                      id="path1332" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 87.9,33.3 c -0.1,0 -0.1,0.1 -0.1,0.1 v 0.9 c 0,0.1 0,0.2 0.1,0.2 h 0.4 2 c -0.1,-0.3 -0.5,-0.5 -0.7,-0.6 0.3,-0.1 0.5,-0.3 0.6,-0.6 h -1.9 z"
+                      id="path1334" inkscape:connector-curvature="0" style="fill:#ffffff"></path>				</g>			</g>		</g>
+            <g id="g1364">			<rect x="55.5" y="51.700001" class="st4" width="50.900002" height="13.7"
+                                            id="rect1342" style="fill:none;stroke:#ffffff;stroke-miterlimit:10"></rect>
+                <g id="g1362">				<path class="st3"
+                                                    d="m 62.8,54.4 c 1.9,0 2.5,1.1 2.5,2.1 0,0.7 -0.4,1.3 -1.1,1.7 1,0.4 1.4,1.1 1.4,1.9 0,1.1 -0.7,2.3 -2.6,2.3 h -3.2 v -8 z m 1.3,2.2 c 0,-0.5 -0.2,-1.1 -1.3,-1.1 H 61 v 2.2 h 1.6 c 1,0 1.5,-0.5 1.5,-1.1 z m 0.3,3.5 c 0,-0.7 -0.3,-1.3 -1.7,-1.3 H 61 v 2.5 h 2.1 c 1,0 1.3,-0.7 1.3,-1.2 z"
+                                                    id="path1344" inkscape:connector-curvature="0"
+                                                    style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 66.9,54.9 c 0,-0.4 0.3,-0.7 0.7,-0.7 0.4,0 0.7,0.3 0.7,0.7 0,0.4 -0.3,0.7 -0.7,0.7 -0.4,0 -0.7,-0.3 -0.7,-0.7 z m 0.2,1.6 h 1.2 v 5.8 h -1.2 z"
+                          id="path1346" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 69.5,59.4 c 0,-1.9 1.1,-3.1 2.7,-3.1 1.4,0 2.5,0.9 2.5,2.7 0,0.3 0,0.6 0,0.8 h -3.9 c 0,1 0.7,1.6 1.5,1.6 0.5,0 0.9,-0.2 1.2,-0.6 l 0.8,0.8 c -0.4,0.5 -1.1,0.8 -2,0.8 -1.7,0.1 -2.8,-1 -2.8,-3 z m 4,-0.5 c 0,-1.1 -0.7,-1.5 -1.3,-1.5 -0.7,0 -1.4,0.4 -1.5,1.5 z"
+                          id="path1348" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3" d="m 76,54.7 1.2,-0.6 v 8.3 H 76 Z" id="path1350" inkscape:connector-curvature="0"
+                          style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 78.5,59.4 c 0,-1.9 1.1,-3.1 2.7,-3.1 1.4,0 2.5,0.9 2.5,2.7 0,0.3 0,0.6 0,0.8 h -3.9 c 0,1 0.7,1.6 1.5,1.6 0.5,0 0.9,-0.2 1.2,-0.6 l 0.8,0.8 c -0.4,0.5 -1.1,0.8 -2,0.8 -1.8,0.1 -2.8,-1 -2.8,-3 z m 4,-0.5 c 0,-1.1 -0.7,-1.5 -1.3,-1.5 -0.7,0 -1.4,0.4 -1.5,1.5 z"
+                          id="path1352" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 86.5,62.4 h -1.2 v -4.8 h -0.9 v -1 h 0.9 v -0.9 c 0,-1.1 0.7,-1.4 1.3,-1.4 0.5,0 0.8,0.1 1.2,0.3 v 1 c -0.4,-0.1 -0.6,-0.2 -0.8,-0.2 -0.4,0 -0.5,0.2 -0.5,0.5 v 0.7 h 1.3 v 1 h -1.3 z"
+                          id="path1354" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 88.2,59.4 c 0,-1.9 1.1,-3.1 2.7,-3.1 1.4,0 2.5,0.9 2.5,2.7 0,0.3 0,0.6 0,0.8 h -3.9 c 0,1 0.7,1.6 1.5,1.6 0.5,0 0.9,-0.2 1.2,-0.6 l 0.8,0.8 c -0.4,0.5 -1.1,0.8 -2,0.8 -1.7,0.1 -2.8,-1 -2.8,-3 z m 4,-0.5 c 0,-1.1 -0.7,-1.5 -1.3,-1.5 -0.7,0 -1.4,0.4 -1.5,1.5 z"
+                          id="path1356" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3" d="m 94.7,54.7 1.2,-0.6 v 8.3 h -1.2 z" id="path1358"
+                          inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 97.2,59.4 c 0,-1.9 1,-3.1 2.4,-3.1 0.6,0 1.1,0.2 1.4,0.5 v -2.3 l 1.2,-0.5 v 8.3 H 101 v -0.4 c -0.3,0.3 -0.7,0.5 -1.4,0.5 -1.5,0.1 -2.4,-1 -2.4,-3 z m 3.8,1.3 v -2.6 c -0.2,-0.3 -0.6,-0.6 -1.2,-0.6 -0.9,0 -1.4,0.7 -1.4,1.9 0,1.1 0.5,1.9 1.4,1.9 0.5,0.1 0.9,-0.2 1.2,-0.6 z"
+                          id="path1360" inkscape:connector-curvature="0" style="fill:#ffffff"></path>			</g>		</g>	</g>
+        <path class="st5" d="M 64.5,140.7 67.3,86 c 2.8,0 8.5,0 27.3,0 l 2.8,54.7 -16.3,7 z" id="path1368"
+              inkscape:connector-curvature="0"
+              style="opacity:0;fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></path>
+        <g id="g1374">		<polyline class="st1" points="20.4,115.4 51.7,79.6 20.5,43.8   " id="polyline1370"
+                                        style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="19.7,95.7 33.7,79.6 19.2,62.9   " id="polyline1372"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>	</g>
+        <path class="st1" d="M 142.1,95.3" id="path1376" inkscape:connector-curvature="0"
+              style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></path>
+        <path class="st1" d="M 142.1,64.1" id="path1378" inkscape:connector-curvature="0"
+              style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></path>
+        <g id="g1388">		<line class="st1" x1="109.2" y1="102.3" x2="109.2" y2="133" id="line1380"
+                                    style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></line>
+            <polyline class="st1" points="101.8,110.4 109.2,101.1 116.7,110.4   " id="polyline1382"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="101.8,116.8 109.2,107.4 116.7,116.8   " id="polyline1384"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="101.8,123.3 109.2,113.9 116.7,123.3   " id="polyline1386"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>	</g>
+        <g id="g1396">		<line class="st1" x1="52.299999" y1="113.9" x2="52.299999" y2="134" id="line1390"
+                                    style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></line>
+            <polyline class="st1" points="44.9,122 52.3,112.6 59.9,122   " id="polyline1392"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="44.9,128.4 52.3,119 59.9,128.4   " id="polyline1394"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>	</g></g>
+    <g id="Ebene_5" style="display:inline">	<g id="g1401">		<path class="st0"
+                                                                           d="m 80.9,11.5 59.4,34.2 v 68.4 L 80.9,148.3 21.5,114.1 V 45.7 L 80.9,11.5 m 0,-3.6 -62.5,36 v 72 l 62.5,36 62.5,-36 v -72 z"
+                                                                           id="path1399"
+                                                                           inkscape:connector-curvature="0"
+                                                                           style="fill:#ff867f"></path>	</g></g>
+    <g id="Ebene_6" style="display:inline">	<polygon class="st1"
+                                                        points="139.6,113.8 81.1,147.7 22.6,113.8 22.6,46.2 81.1,12.3 139.6,46.2 "
+                                                        id="polygon1404"
+                                                        style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polygon>
+        <g id="g1488">		<g id="g1408">			<path class="st6"
+                                                              d="m 78.1,101.3 c 0,-1.8 0.6,-4.3 2.9,-4.3 2.3,0 2.9,2.3 2.9,4.3 0,1.8 -0.6,4.3 -2.9,4.3 -2.3,0 -2.9,-2.2 -2.9,-4.3 z m 4.7,0 c 0,-1.7 -0.4,-3.4 -1.8,-3.4 -1.5,0 -1.9,1.9 -1.9,3.4 0,1.7 0.4,3.4 1.9,3.4 1.5,-0.1 1.8,-1.9 1.8,-3.4 z"
+                                                              id="path1406" inkscape:connector-curvature="0"
+                                                              style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1412">			<path class="st6"
+                                            d="m 78,117.5 c 0,-1.9 0.6,-4.3 3,-4.3 2.3,0 3,2.3 3,4.3 0,1.9 -0.6,4.3 -3,4.3 -2.3,0.1 -3,-2.2 -3,-4.3 z m 4.7,0 c 0,-1.6 -0.4,-3.1 -1.7,-3.1 -1.4,0 -1.7,1.7 -1.7,3.1 0,1.6 0.4,3.1 1.7,3.1 1.4,0.1 1.7,-1.6 1.7,-3.1 z"
+                                            id="path1410" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1416">			<path class="st6"
+                                            d="m 78,134 c 0,-1.9 0.6,-4.3 3,-4.3 2.3,0 3,2.3 3,4.3 0,1.9 -0.6,4.3 -3,4.3 -2.3,0 -3,-2.3 -3,-4.3 z m 4.7,0 c 0,-1.6 -0.4,-3.1 -1.7,-3.1 -1.4,0 -1.7,1.7 -1.7,3.1 0,1.6 0.4,3.1 1.7,3.1 1.4,0 1.7,-1.7 1.7,-3.1 z"
+                                            id="path1414" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1420">			<path class="st6"
+                                            d="m 94.1,90.5 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1418" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1424">			<path class="st6"
+                                            d="m 95.1,100.5 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1422" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1428">			<path class="st6"
+                                            d="m 96.1,110.6 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1426" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1432">			<path class="st6"
+                                            d="M 97.1,120.7 H 95.7 V 120 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1430" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1436">			<path class="st6"
+                                            d="m 98.1,130.8 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.6 l -1,0.7 v -7.6 z"
+                                            id="path1434" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1440">			<path class="st6"
+                                            d="m 93.9,76.3 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 H 95 V 83 h -1 v -6.7 z"
+                                            id="path1438" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <path class="st6" d="m 89.4,83 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 89.5 V 83 Z" id="path1442"
+                  inkscape:connector-curvature="0"
+                  style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>
+            <g id="g1446">			<path class="st6"
+                                            d="m 72.8,76.3 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 V 83 h -1 v -6.7 z"
+                                            id="path1444" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1450">			<path class="st6"
+                                            d="m 68.3,83 h -1 V 74.6 H 68 c 0.3,0.8 0.9,1 1.7,1 v 0.7 h -1.4 z"
+                                            id="path1448" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1454">			<path class="st6"
+                                            d="M 83.4,76.3 H 82 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 V 83 h -1 v -6.7 z"
+                                            id="path1452" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1458">			<path class="st6"
+                                            d="m 78.7,83 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 78.8 V 83 Z"
+                                            id="path1456" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1462">			<path class="st6"
+                                            d="m 67.9,85.7 v 1.4 h -0.7 c 0,-0.8 -0.2,-1.4 -1,-1.7 v -0.8 h 8.4 v 1 h -6.7 z"
+                                            id="path1460" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1466">			<path class="st6"
+                                            d="m 87.4,85.7 v -1 h 8.4 v 0.8 c -0.8,0.3 -1,0.9 -1,1.7 h -0.7 v -1.4 h -6.7 z"
+                                            id="path1464" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1470">			<path class="st6"
+                                            d="m 68,97.2 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 68 Z"
+                                            id="path1468" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1474">			<path class="st6"
+                                            d="m 67,107.3 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 67 Z"
+                                            id="path1472" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1478">			<path class="st6"
+                                            d="M 66,117.3 H 65 V 109 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 66 Z"
+                                            id="path1476" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1482">			<path class="st6"
+                                            d="M 65,127.4 H 64 V 119 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 65 Z"
+                                            id="path1480" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1486">			<path class="st6"
+                                            d="m 64,138.3 -1,-0.5 v -8.7 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 64 Z"
+                                            id="path1484" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>	</g></g></svg>
+</div>
+    </div>
+    <div class="grow">
+      <div style="font-size:15px; font-weight:700; letter-spacing:.08em; color:var(--coral); margin-bottom:12px;">CODE FOR BIELEFELD · JULI 2026</div>
+      <div style="font-size:64px; font-weight:800; letter-spacing:-0.015em; line-height:1.05;">Open Source LLMs</div>
+      <div style="font-size:22px; color:var(--muted); margin-top:16px; line-height:1.4; max-width:660px;">
+        Leistungsfähige KI auf dem eigenen Laptop — keine Cloud, kein API-Key, keine Daten verlassen den Raum.</div>
+      <div style="font-size:14px; color:var(--faint); margin-top:14px;">Durchgehend Live-Demos · Ollama · ein normaler 16&nbsp;GB Laptop</div>
+      <div class="term" style="margin-top:30px; max-width:680px;">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e2b
+<span class="mut">&gt;&gt;&gt; Erkläre in 3 Sätzen, warum Bielefeld existiert.</span>
+<span class="out">Bielefeld existiert – und das lässt sich sogar lokal beweisen. _</span></pre>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">Aufbau bevor die Leute kommen: Terminal offen, ollama serve läuft, Modelle vorab geladen. Diese Titelfolie bleibt stehen, während die Leute eintreffen.
+Vortrag: 30–45 Min + Q&amp;A, Live-Demos auf dem 16-GB-Laptop.</aside>
+</section>
+
+<!-- ============================================================ 2 · HOOK -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">00</text></svg>
+    <span class="lbl">Aufhänger · zuerst die Live-Demo</span>
+  </div>
+  <h1 class="title">Das lief gerade auf diesem Laptop</h1>
+  <div class="cols">
+    <div class="grow">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>live — kein Netz nötig</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e2b
+<span class="mut">&gt;&gt;&gt; Erkläre in 3 Sätzen, warum Bielefeld existiert.</span>
+
+<span class="out">Bielefeld existiert seit 1214 als Kaufmannsstadt am Übergang
+durch den Teutoburger Wald. Die Sparrenburg bewachte den Pass,
+die Leinenweber brachten den Handel. Dass die Stadt nicht
+existiere, ist nur ein Internet-Witz.</span>
+
+<span class="com"># gemma4:e2b · 2.3B Parameter · ~2 GB · nur CPU
+# ~40 Tokens/s auf dieser CPU — schnell genug zum Mitlesen</span></pre>
+      </div>
+      <div style="font-size:14px; font-style:italic; color:var(--faint); margin-top:12px;">Flugmodus an — die Demo läuft trotzdem.</div>
+    </div>
+    <div style="flex:0 0 380px; display:flex; flex-direction:column; gap:18px;">
+      <div class="card" style="padding:20px 24px;">
+        <div style="font-size:18px; font-weight:700;">Läuft komplett auf diesem Laptop</div>
+        <div style="font-size:14px; color:var(--muted); margin-top:6px;">2 GB Download · 16 GB Consumer-Laptop · keine GPU</div>
+      </div>
+      <div class="card" style="padding:20px 24px;">
+        <div style="font-size:18px; font-weight:700;">Keine Cloud, kein API-Key</div>
+        <div style="font-size:14px; color:var(--muted); margin-top:6px;">Kein Account, keine Rate-Limits, keine monatliche Rechnung</div>
+      </div>
+      <div class="card" style="padding:20px 24px;">
+        <div style="font-size:18px; font-weight:700; color:var(--coral);">Keine Daten verlassen den Raum</div>
+        <div style="font-size:14px; color:var(--muted); margin-top:6px;">Datenschutz by Design — DSGVO-freundlich</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">02</div>
+  <aside class="notes">Mit der Live-Demo VOR den Folien beginnen — gemma4:e2b starten, etwas Lustiges auf Deutsch fragen (Gemma 4 kann 140+ Sprachen).
+Die Kernaussage klarmachen: das läuft auf DIESEM Laptop. WLAN kann aus sein.
+Fallback: Bildschirmaufnahme genau dieser Demo.</aside>
+</section>
+
+<!-- ============================================================ 3 · OPEN -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">01</text></svg>
+    <span class="lbl">Was „open“ wirklich bedeutet</span>
+  </div>
+  <h1 class="title">„Open-Source-LLM“ heißt meist offene Gewichte</h1>
+  <div class="cols">
+    <div class="grow">
+      <div class="card" style="padding:16px 24px; margin-bottom:14px; display:flex; align-items:center; gap:18px;">
+        <div class="grow">
+          <div style="font-size:18px; font-weight:700;">Offene Gewichte</div>
+          <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">Man bekommt die trainierten Parameter — herunterladen, ausführen, fine-tunen. Das bedeutet „open“ bei fast jedem Modell.</div>
+        </div>
+        <span style="flex:0 0 auto; font:600 12px var(--mono); color:var(--green); background:var(--term); border-radius:14px; padding:6px 14px;">der Normalfall</span>
+      </div>
+      <div class="card" style="padding:16px 24px; margin-bottom:14px; display:flex; align-items:center; gap:18px;">
+        <div class="grow">
+          <div style="font-size:18px; font-weight:700;">Offene Daten</div>
+          <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">Die Trainingsdaten sind veröffentlicht. Nur sehr wenige Modelle (z. B. OLMo-artige Forschungsprojekte).</div>
+        </div>
+        <span style="flex:0 0 auto; font:600 12px var(--mono); color:var(--amber); background:var(--term); border-radius:14px; padding:6px 14px;">selten</span>
+      </div>
+      <div class="card" style="padding:16px 24px; display:flex; align-items:center; gap:18px;">
+        <div class="grow">
+          <div style="font-size:18px; font-weight:700;">Offener Trainingscode</div>
+          <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">Das komplette Rezept, um das Modell von Grund auf zu reproduzieren.</div>
+        </div>
+        <span style="flex:0 0 auto; font:600 12px var(--mono); color:var(--amber); background:var(--term); border-radius:14px; padding:6px 14px;">selten</span>
+      </div>
+      <div style="font-size:14.5px; margin-top:20px;"><b>Lizenzen unterscheiden sich trotzdem:</b>
+        <span style="color:var(--muted);"> Apache 2.0 (Qwen — alles erlaubt) · Gemma-Lizenz · Llama-Lizenz (mit Nutzungsbedingungen)</span></div>
+    </div>
+    <div style="flex:0 0 400px;">
+      <div style="font-size:14px; font-weight:700; letter-spacing:.07em; color:var(--coral); margin-bottom:16px;">WARUM WICHTIG?</div>
+      <ul class="dots">
+        <li><b>Datenschutz — DSGVO!</b><span>Bürgerdaten verlassen nie den Rechner</span></li>
+        <li><b>Kosten &amp; offline</b><span>Keine Abrechnung pro Token, funktioniert ohne Internet</span></li>
+        <li><b>Kein Vendor-Lock-in</b><span>Die Modelldatei gehört dir, für immer</span></li>
+        <li><b>Fine-tunebar</b><span>An die eigene Domäne anpassen (→ LoRA, später)</span></li>
+      </ul>
+      <div style="font-size:14px; font-style:italic; color:var(--faint); margin-top:8px;">Passt hervorragend zu Civic Tech und Verwaltung.</div>
+    </div>
+  </div>
+  <div class="pageno">03</div>
+  <aside class="notes">TODO vor dem Vortrag: aktuelle Gemma-Lizenzbedingungen vs. Apache 2.0 gegenprüfen.
+Punkt für dieses Publikum: „offene Gewichte“ sind der Normalfall — ausführen und fine-tunen geht, aber Trainingsdaten/-rezept bleiben meist geschlossen.
+Civic-Tech-Winkel: DSGVO + Verwaltung ist hier das stärkste Argument.</aside>
+</section>
+
+<!-- ============================================================ 4 · LANDSCAPE -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">02</text></svg>
+    <span class="lbl">Die Landschaft · Mitte 2026</span>
+  </div>
+  <h1 class="title">Wer ist wer bei offenen Modellen</h1>
+  <div class="cols">
+    <div class="card grow" style="padding:26px 32px;">
+      <div style="font-size:27px; font-weight:700;">Gemma 4</div>
+      <div style="font-size:14.5px; color:var(--coral); margin:4px 0 18px;">Google — „der multimodale Generalist“</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">E2B · E4B · 12B Unified · 26B MoE · 31B</b><span>Größen vom Handy → Workstation</span></li>
+        <li><b style="font-size:16px;">Multimodal</b><span>Text + Bild (12B Unified auch Audio) · 256K Kontext</span></li>
+        <li><b style="font-size:16px;">140+ Sprachen</b><span>besonders starkes Deutsch</span></li>
+      </ul>
+    </div>
+    <div class="card grow" style="padding:26px 32px;">
+      <div style="font-size:27px; font-weight:700;">Qwen 3.6</div>
+      <div style="font-size:14.5px; color:var(--coral); margin:4px 0 18px;">Alibaba — „das Coding-Monster“</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">27B dense</b><span>eine Größe, hart optimiert für Code &amp; Agenten</span></li>
+        <li><b style="font-size:16px;">77.2% SWE-bench Verified</b><span>auf Augenhöhe mit den besten proprietären Modellen</span></li>
+        <li><b style="font-size:16px;">Apache 2.0</b><span>die freizügigste Lizenz überhaupt</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="card2" style="margin-top:22px; padding:20px 32px; font-size:16px;">
+    <b>Ebenfalls dabei:</b> <span style="color:var(--muted);">DeepSeek (offene Reasoning-Modelle) · Llama (Metas Ökosystem) · Mistral (europäisch, effizient)</span>
+  </div>
+  <div class="pageno">04</div>
+  <aside class="notes">TODO: aktuelle DeepSeek-/Llama-/Mistral-Versionen für je eine Zeile auswählen.
+Medien-Idee: Ollama-Modell-Bibliothek oder HF-Leaderboard live zeigen, falls WLAN geht — Screenshot als Fallback.</aside>
+</section>
+
+<!-- ============================================================ 5 · STORY -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">03</text></svg>
+    <span class="lbl">Die eigentliche Geschichte</span>
+  </div>
+  <h1 class="title">Vom Rechenzentrum zum Laptop in sechs Jahren</h1>
+  <div style="position:relative; margin:104px 30px 96px;">
+    <div style="position:absolute; left:0; right:0; top:7px; height:2px; background:var(--termbrd);"></div>
+    <div style="display:flex; justify-content:space-between;">
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2020</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--bg); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">GPT-3</div>
+        <div style="font-size:13.5px; color:var(--muted);">175B · proprietär</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">nur Rechenzentrum</div>
+      </div>
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2023</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--bg); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">Llama 2</div>
+        <div style="font-size:13.5px; color:var(--muted);">70B · halb-offen</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">Workstation</div>
+      </div>
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2025</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--bg); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">Gemma 3 / Qwen 3</div>
+        <div style="font-size:13.5px; color:var(--muted);">4–32B · offen</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">Laptop</div>
+      </div>
+      <div style="flex:1; text-align:center; position:relative;">
+        <div style="position:absolute; left:50%; top:-34px; transform:translateX(-50%); font-size:16px; font-weight:700; color:var(--coral);">2026</div>
+        <div style="width:16px; height:16px; border-radius:50%; border:2.5px solid var(--coral); background:var(--coral); margin:0 auto;"></div>
+        <div style="margin-top:14px; font-size:17px; font-weight:700;">Gemma 4 E2B/E4B</div>
+        <div style="font-size:13.5px; color:var(--muted);">2–4B · offen · multimodal</div>
+        <div style="font-size:13.5px; color:var(--faint); font-style:italic;">jeder Laptop, sogar Handys</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin:0 110px; padding:36px 44px; border:1.5px solid var(--coraldk); border-radius:16px;">
+    <div style="font-size:24px; font-weight:700; line-height:1.3;">Qwen 3.6-27B schlägt seinen eigenen 397B-Vorgänger in Coding-Benchmarks</div>
+    <div style="margin-top:14px;"><span class="mono" style="font-size:18px; font-weight:700; color:var(--coral);">klein + neu &nbsp;&gt;&nbsp; groß + alt</span>
+      <span style="font-size:15px; color:var(--muted);">&nbsp; — Fähigkeit pro Parameter steigt weiter</span></div>
+  </div>
+  <div class="pageno">05</div>
+  <aside class="notes">DIE Geschichte des Vortrags: Fähigkeit wurde in kleine Modelle komprimiert.
+Killer-Zahl: Qwen3.6-27B schlägt den eigenen 397B-Vorgänger in Coding-Benchmarks — klein + neu &gt; groß + alt.</aside>
+</section>
+
+<!-- ============================================================ 6 · DEMO 1 -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">04</text></svg>
+    <span class="lbl">Live-Demo · kleine Modelle auf diesem Laptop</span>
+  </div>
+  <h1 class="title">Gleicher Prompt, drei Größen — Tokens/s beobachten</h1>
+  <div class="cols">
+    <div class="grow" style="display:flex; flex-direction:column; gap:18px;">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>Demo 1 — Größe vs. Geschwindigkeit</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e2b --verbose "Schreibe eine
+<span class="mut">    Python-Funktion: Ist ein Jahr ein Schaltjahr?"</span>
+<span class="com"># … eval rate: ~XX Tokens/s   ← live messen</span>
+
+<span class="p">$ </span>ollama run gemma4:e4b --verbose "…"
+<span class="p">$ </span>ollama run gemma4:12b --verbose "…"
+<span class="com"># Geschwindigkeit sinkt, Qualität steigt</span></pre>
+      </div>
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>Demo 2 — Vision</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e4b "Was ist auf diesem
+<span class="mut">    Bild zu sehen?" ./bielefeld-rathaus.jpg</span>
+<span class="com"># Multimodal-Teaser — Bild rein, Antwort raus
+# gemma4 liest Formulare, Fahrpläne, Handschrift</span></pre>
+      </div>
+    </div>
+    <div style="flex:0 0 400px; display:flex; flex-direction:column; gap:18px;">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>zweites Terminal</span></div>
+        <pre><span class="p">$ </span>ollama ps
+<span class="mut">NAME         SIZE   PROC</span>
+<span class="out">gemma4:12b   8.1GB  100% CPU</span>
+<span class="com"># RAM-Verbrauch, live</span></pre>
+      </div>
+      <div class="card grow" style="padding:22px 26px;">
+        <div style="font-size:20px; font-weight:700; color:var(--amber);">Die Wand</div>
+        <div class="mono" style="font-size:14px; margin-top:12px;"><span style="color:var(--coral); font-weight:700;">$ </span>ollama pull qwen3.6:27b</div>
+        <div style="font-size:14.5px; color:var(--muted); margin-top:12px; line-height:1.5;">
+          Q4-Gewichte allein ≈ 16&nbsp;GB — mehr als der gesamte RAM dieses Laptops.<br><br>
+          Passt nicht. Warum? Und was würde passen?</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">06</div>
+  <aside class="notes">DEMO-BLOCK 1 (~8 Min). Alle Modelle vorab laden; Browser schließen, damit 12B passt; für jede Demo eine Bildschirmaufnahme als Fallback.
+Den gleichen Prompt in 3 Größen mit --verbose ausführen, Tokens/s sinken und Qualität steigen sehen. Zweites Terminal: ollama ps zeigt RAM-Verbrauch + 100% CPU.
+Dann die Wand: qwen3.6:27b Q4 ist allein ~16GB Gewichte → passt nicht → perfekter Übergang zu Quantisierung &amp; Hardware.
+Multimodal-Teaser: Bild des Rathauses in gemma4:e4b geben.</aside>
+</section>
+
+<!-- ============================================================ 7 · NUMBERS -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">05</text></svg>
+    <span class="lbl">Die Zahlen</span>
+  </div>
+  <h1 class="title">Geschwindigkeit vs. RAM vs. Qualität — hier gemessen</h1>
+  <table>
+    <thead><tr><th>Modell</th><th>Parameter</th><th>Quant</th><th>RAM</th><th>Tokens/s (dieser Laptop)</th><th>Qualität</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">gemma4:e2b</td><td>2.3B</td><td>Q4</td><td>~3 GB</td><td class="accent">→ live gemessen</td><td>okay zum Chatten</td></tr>
+      <tr><td class="mono">gemma4:e4b</td><td>4B</td><td>Q4</td><td>~5 GB</td><td class="accent">→ live gemessen</td><td>guter Allrounder</td></tr>
+      <tr><td class="mono">gemma4:12b</td><td>12B</td><td>Q4</td><td>~8 GB</td><td class="accent">→ live gemessen</td><td>merklich besser</td></tr>
+      <tr><td class="mono">qwen3.6:27b</td><td>27B</td><td>Q4</td><td>~17 GB</td><td class="bad">passt nicht</td><td>—</td></tr>
+      <tr><td class="mono">qwen3.6:27b <span style="color:var(--muted);">(gemietete GPU)</span></td><td>27B</td><td>Q8</td><td>30–60 GB</td><td class="good">30–60 t/s</td><td>Spitzen-Coding</td></tr>
+    </tbody>
+  </table>
+  <div class="card" style="margin-top:24px; padding:22px 30px;">
+    <div style="font-size:16px; font-weight:700; color:var(--coral);">Faustregel</div>
+    <div class="mono" style="font-size:19px; font-weight:700; margin-top:10px;">RAM &nbsp;≈&nbsp; Parameter × Bytes pro Gewicht &nbsp;+&nbsp; Kontext-Overhead</div>
+    <div style="font-size:14.5px; color:var(--muted); margin-top:10px;">FP16 = 2 Bytes/Param · Q4 ≈ 0,5 Bytes/Param &nbsp;→&nbsp; ein 27B-Modell: 54 GB in FP16, ~15 GB in Q4</div>
+  </div>
+  <div class="pageno">07</div>
+  <aside class="notes">TODO: test_token_speeds.py vorab laufen lassen und die echten Tokens/s + eigene Qualitätsbewertungen eintragen (die Tabelle aus EIGENEN Messungen bauen — glaubwürdiger als Benchmark-Screenshots). Das Skript kurz zeigen.
+TODO: die Story zur großen Hardware festlegen — GPU mieten für echte Qwen-3.6-Zahlen, oder veröffentlichte Benchmarks nutzen.
+Prüfen, dass gemma4:12b in 16GB wirklich läuft (Browser schließen!).</aside>
+</section>
+
+<!-- ============================================================ 8 · FORMULA -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">06</text></svg>
+    <span class="lbl">Hardware</span>
+  </div>
+  <h1 class="title">Eine Formel erklärt den gesamten Markt</h1>
+  <div class="term" style="text-align:center; padding:26px; border-color:var(--coraldk);">
+    <span class="mono" style="font-size:26px; font-weight:700; color:var(--coral);">Tokens/s &nbsp;≈&nbsp; Speicherbandbreite &nbsp;÷&nbsp; Modellgröße in Bytes</span>
+  </div>
+  <div style="text-align:center; font-size:15px; color:var(--muted); margin:18px 0 44px;">
+    Ein Token zu erzeugen liest jedes Gewicht einmal — Inferenz ist speicher-, nicht rechengebunden.</div>
+  <div style="max-width:1120px;">
+    <div class="bw"><span>Laptop CPU · DDR5</span><div class="track"><div style="width:4.4%;  background:var(--muted);"></div><b>100 GB/s</b></div></div>
+    <div class="bw"><span>Ryzen AI Max 395 · unified</span><div class="track"><div style="width:11.1%; background:var(--muted);"></div><b>256 GB/s</b></div></div>
+    <div class="bw"><span>Mac M4 Max · unified</span><div class="track"><div style="width:23.8%; background:var(--muted);"></div><b>546 GB/s</b></div></div>
+    <div class="bw"><span>RTX 3090 · GDDR6X</span><div class="track"><div style="width:40.7%; background:var(--coral);"></div><b>936 GB/s</b></div></div>
+    <div class="bw"><span>RTX 5090 · GDDR7</span><div class="track"><div style="width:78%;  background:var(--coral);"></div><b>1792 GB/s</b></div></div>
+  </div>
+  <style>
+    .bw { display:flex; align-items:center; gap:16px; margin-bottom:18px; }
+    .bw > span { flex:0 0 250px; text-align:right; font-size:14.5px; }
+    .bw .track { flex:1; display:flex; align-items:center; gap:12px; }
+    .bw .track div { height:26px; border-radius:6px; flex:0 0 auto; }
+    .bw b { font: 700 14px var(--mono); white-space:nowrap; }
+  </style>
+  <div style="margin-top:32px; margin-left:266px; font-size:14.5px;">
+    <b>Auf diesem Laptop:</b> <span class="mono" style="color:var(--muted);">4B Q4 ≈ 10 t/s — angenehm &nbsp;&nbsp;·&nbsp;&nbsp; 12B Q4 ≈ 6 t/s — quälend</span></div>
+  <div class="pageno">08</div>
+  <aside class="notes">Die eine Formel, die den ganzen Hardware-Markt erklärt. LLM-Generierung ist bandbreiten-, nicht rechengebunden: jedes erzeugte Token liest alle Gewichte einmal.
+CPU Dual-Channel DDR5 ~100GB/s → 4B Q4 (~2,5GB) bei ~10 t/s ist angenehm; 12B Q4 (~16GB) bei ~6 t/s ist quälend.
+Optionale Demo: ollama ps zeigt hier 100% CPU; Screenshot desselben auf einer GPU-Maschine mit 100% GPU + dem t/s-Unterschied.</aside>
+</section>
+
+<!-- ============================================================ 9 · BUYER'S TABLE -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">07</text></svg>
+    <span class="lbl">Hardware · was kostet Geschwindigkeit?</span>
+  </div>
+  <h1 class="title">Die Kauftabelle (Mitte 2026)</h1>
+  <table style="font-size:14px;">
+    <thead><tr><th>Option</th><th>Speicher</th><th>Bandbreite</th><th>Preis</th><th>Sweet Spot</th><th>Qwen 27B?</th></tr></thead>
+    <tbody>
+      <tr><td><b>Dieser Laptop (CPU)</b></td><td>16 GB shared</td><td>100 GB/s</td><td>vorhanden</td><td>≤ 4B Modelle</td><td class="bad">nein</td></tr>
+      <tr><td><b>Gebrauchte RTX 3090</b></td><td>24 GB VRAM</td><td>936 GB/s</td><td>€600–700</td><td>beste t/s pro €</td><td class="good">ja · schnell</td></tr>
+      <tr><td><b>RTX 5090</b></td><td>32 GB VRAM</td><td>1792 GB/s</td><td>€2,600+</td><td>70B Q4, 45+ t/s</td><td class="good">ja · sehr schnell</td></tr>
+      <tr><td><b>Ryzen AI Max+ 395</b></td><td>128 GB unified</td><td>256 GB/s</td><td>€1,500–2,000</td><td>große Modelle, langsam</td><td class="warn">ja · mittel</td></tr>
+      <tr><td><b>Mac Studio</b></td><td>512 GB unified</td><td>546–819 GB/s</td><td>€2,500+</td><td>70B @ 20–30 t/s</td><td class="good">ja · schnell</td></tr>
+      <tr><td><b>Gemietete GPU (vast.ai)</b></td><td>beliebig</td><td>beliebig</td><td>€0.30–0.70/h</td><td>ausprobieren vor dem Kauf</td><td class="good">ja</td></tr>
+    </tbody>
+  </table>
+  <div class="cols" style="margin-top:26px;">
+    <div class="card grow" style="padding:18px 22px;">
+      <div style="font-size:15.5px; font-weight:700; color:var(--coral);">Gebrauchte 3090 = der Geheimtipp</div>
+      <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">gleiche 24 GB wie eine 4090 zu ⅓ des Preises</div>
+    </div>
+    <div class="card grow" style="padding:18px 22px;">
+      <div style="font-size:15.5px; font-weight:700; color:var(--coral);">Vorsicht vor der VRAM-Klippe</div>
+      <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">passt nicht in den VRAM → Geschwindigkeit bricht ein</div>
+    </div>
+    <div class="card grow" style="padding:18px 22px;">
+      <div style="font-size:15.5px; font-weight:700; color:var(--coral);">CPU reicht ≤ 4B</div>
+      <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">das ist die Revolution — nicht die 3.000-€-GPU</div>
+    </div>
+  </div>
+  <div class="pageno">09</div>
+  <aside class="notes">Preise sind ungefähre Straßenpreise Mitte 2026. TODO: kurz vor dem Vortrag aktualisieren — GPU-Preise ändern sich schnell.
+TODO: Miete-vs-Kauf-Break-even prüfen (bei ~0,50 €/h amortisiert sich eine gebrauchte 3090 nach rund 1.300 Stunden).
+Gesprächspunkte: gebrauchte RTX 3090 = der Community-Geheimtipp (~1.200 € Gesamtbau). Die VRAM-Klippe: passt das Modell nicht in den VRAM, läuft es in den System-RAM über und die Geschwindigkeit bricht ein. Und: für kleine Modelle reicht die CPU — das ist die eigentliche Revolution, nicht die 3.000-€-GPU.</aside>
+</section>
+
+<!-- ============================================================ 10 · QUANTIZATION -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">08</text></svg>
+    <span class="lbl">Quantisierung</span>
+  </div>
+  <h1 class="title">JPEG für neuronale Netze</h1>
+  <div class="cols" style="margin-top:20px;">
+    <div class="grow">
+      <div style="font-size:19px; line-height:1.5; max-width:540px;">Gewichte sind nur Zahlen. Quantisierung speichert sie mit weniger Bits — verlustbehaftet, wie JPEG, aber man merkt es kaum.</div>
+      <div class="mono" style="font-size:15.5px; font-weight:700; color:var(--coral); margin-top:26px;">FP16 → Q4 = 4× kleiner, ~gleiche Antworten</div>
+    </div>
+    <div style="flex:0 0 620px;">
+      <div style="display:flex; font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--faint); margin-bottom:10px;">
+        <span style="flex:0 0 64px;"></span><span style="flex:1;">GRÖSSE (4B-MODELL)</span><span style="flex:0 0 170px;">QUALITÄT</span></div>
+      <div class="qrow"><span>FP16</span><div style="flex:1;"><div class="qb" style="width:100%; background:var(--termbrd);"></div><i>8,0 GB · Referenz</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:100%; background:var(--muted);"></div></div></div>
+      <div class="qrow"><span>Q8</span><div style="flex:1;"><div class="qb" style="width:54%; background:var(--termbrd);"></div><i style="color:var(--green);">4,3 GB · nicht unterscheidbar</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:100%; background:var(--green);"></div></div></div>
+      <div class="qrow"><span>Q4</span><div style="flex:1;"><div class="qb" style="width:30%; background:var(--termbrd);"></div><i style="color:var(--coral);">2,4 GB · Sweet Spot ← nimm das</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:98%; background:var(--coral);"></div></div></div>
+      <div class="qrow"><span>Q2</span><div style="flex:1;"><div class="qb" style="width:19%; background:var(--termbrd);"></div><i style="color:var(--red);">1,5 GB · sichtbar schlechter</i></div><div style="flex:0 0 170px;"><div class="qb" style="width:84%; background:var(--red);"></div></div></div>
+      <style>
+        .qrow { display:flex; align-items:flex-start; gap:14px; margin-bottom:27px; }
+        .qrow > span { flex:0 0 50px; text-align:right; font:700 15px var(--mono); padding-top:2px; }
+        .qb { height:20px; border-radius:5px; margin-bottom:4px; }
+        .qrow i { font-size:12.5px; font-style:italic; color:var(--muted); }
+      </style>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:52px;">
+    <div class="term grow">
+      <div class="bar"><i></i><i></i><i></i><span>Demo — q8 vs. q4</span></div>
+      <pre><span class="p">$ </span>ollama pull gemma4:e2b-it-q8_0    <span class="com"># vs. Standard q4_K_M</span>
+<span class="com"># gleicher Prompt bei beiden → RAM, Speed, Ausgabe vergleichen
+# Spoiler: du wirst den Unterschied nicht sehen</span></pre>
+    </div>
+    <div class="card2" style="flex:0 0 400px; padding:20px 26px;">
+      <div style="font-size:16px; font-weight:700;">Unter der Haube</div>
+      <div style="font-size:14px; color:var(--muted); margin-top:8px; line-height:1.55;">
+        GGUF = das Dateiformat für quantisierte Modelle.<br>llama.cpp = die Engine unter Ollama.</div>
+    </div>
+  </div>
+  <div class="pageno">10</div>
+  <aside class="notes">Zuerst die Intuition: Gewichte sind nur Zahlen; Quantisierung speichert sie ungenauer. Die JPEG-Analogie trägt den ganzen Abschnitt.
+Live, wenn Zeit: gleiches Modell in q4 und q8 → Speed, RAM und (meist) kaum unterschiedliche Ausgabe vergleichen. Ein über-quantisiertes Q2-Modell mit schlechteren Antworten bleibt besser im Kopf als jedes Diagramm.
+Erwähnen: GGUF-Dateiformat, llama.cpp ist die Engine unter Ollama.
+Medien-Idee: 3Blue1Brown-Clips für die „Gewichte sind Zahlen“-Intuition; Perplexity-vs-Quant-Diagramm aus den llama.cpp-Docs.</aside>
+</section>
+
+<!-- ============================================================ 11 · INFERENCE VS TRAINING -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">09</text></svg>
+    <span class="lbl">Inferenz vs. Training</span>
+  </div>
+  <h1 class="title">Ausführen kannst du es. Trainieren nicht.</h1>
+  <div class="cols">
+    <div class="grow">
+      <div style="font-size:12.5px; font-weight:700; letter-spacing:.06em; color:var(--faint); margin-bottom:18px;">SPEICHER FÜR EIN 4B-MODELL</div>
+      <div style="position:relative; padding-right:20px;">
+        <div class="mrow"><span>Inferenz Q4</span><div style="width:5%; background:var(--green);"></div><b style="color:var(--green);">2,5 GB — locker</b></div>
+        <div class="mrow"><span>Inferenz FP16</span><div style="width:16%; background:var(--muted);"></div><b style="color:var(--muted);">8 GB — knapp</b></div>
+        <div class="mrow"><span style="color:var(--amber);">Volles Training</span>
+          <div style="width:16%; background:#C4655F; border-radius:5px 0 0 5px;"></div>
+          <div style="width:16%; background:var(--coral); border-radius:0;"></div>
+          <div style="width:32%; background:var(--amber); border-radius:0;"></div>
+          <div style="width:36%; background:#FFE3A3; border-radius:0 5px 5px 0;"></div>
+          <b style="color:var(--red);">50+ GB — nein</b></div>
+        <div style="display:flex; gap:18px; margin:10px 0 0 190px; font-size:12.5px; color:var(--muted); flex-wrap:wrap;">
+          <span><i class="sq" style="background:#C4655F;"></i>Gewichte 8</span>
+          <span><i class="sq" style="background:var(--coral);"></i>Gradienten 8</span>
+          <span><i class="sq" style="background:var(--amber);"></i>Optimizer 16</span>
+          <span><i class="sq" style="background:#FFE3A3;"></i>Aktivierungen 18+</span>
+        </div>
+        <style>
+          .mrow { display:flex; align-items:center; margin-bottom:22px; }
+          .mrow > span { flex:0 0 150px; font-size:15px; font-weight:700; }
+          .mrow div { height:22px; }
+          .mrow div:first-of-type { margin-left:40px; border-radius:5px; }
+          .mrow b { font: 700 13.5px var(--mono); margin-left:10px; white-space:nowrap; }
+          .sq { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+        </style>
+      </div>
+      <div style="font-size:14.5px; color:var(--muted); margin-top:30px;">Ein 27B trainieren: ~350+ GB → Multi-GPU-Cluster.</div>
+      <div class="card" style="margin-top:28px; padding:40px 30px; text-align:center; border:1px solid var(--coraldk); border-radius:16px;">
+        <div style="font-size:21px; font-weight:700;">Inferenz ist, das Buch zu lesen.</div>
+        <div style="font-size:21px; font-weight:700; color:var(--coral); margin-top:6px;">Training ist, es zu schreiben.</div>
+      </div>
+    </div>
+    <div style="flex:0 0 470px;">
+      <div style="font-size:12.5px; font-weight:700; letter-spacing:.06em; color:var(--faint); margin-bottom:18px;">WOHER DER UNTERSCHIED?</div>
+      <div class="card2" style="padding:24px; margin-bottom:20px;">
+        <div style="font-size:16.5px; font-weight:700;">10–20× so viel Speicher wie Q4-Inferenz</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">Backprop hält Gradienten + Adam-Zustände + Aktivierungen neben den Gewichten</div>
+      </div>
+      <div class="card2" style="padding:24px; margin-bottom:20px;">
+        <div style="font-size:16.5px; font-weight:700;">Training geht nicht in 4-Bit</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">winzige Gradienten-Updates verschwinden in groben Zahlenformaten — Präzision ist nötig</div>
+      </div>
+      <div class="card2" style="padding:24px;">
+        <div style="font-size:16.5px; font-weight:700;">Und es ist auch Rechenleistung</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:5px;">Pretraining der Gemma-Klasse: Tausende GPUs über Wochen — dieser Laptop: Jahrhunderte</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">11</div>
+  <aside class="notes">Die zentrale Rechenfolie. Training braucht Gewichte + Gradienten + Adam-Optimizer-Zustände + Aktivierungen ≈ 10–20× so viel Speicher wie quantisierte Inferenz — und es lässt sich nicht aggressiv quantisieren, weil winzige Gradienten-Updates in 4-Bit verschwinden.
+Rechenseite: Pretraining der Gemma-Klasse = Tausende GPUs × Wochen.
+TODO: nette Überschlagsrechnung — „Gemma 4 auf diesem Laptop trainieren ≈ X Jahre“ (Pretraining-FLOPs ÷ Laptop-FLOPs).
+Medien-Idee: Rechenzentrums-Foto vs. dieser Laptop, nebeneinander.</aside>
+</section>
+
+<!-- ============================================================ 12 · LORA -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">10</text></svg>
+    <span class="lbl">Das Schlupfloch</span>
+  </div>
+  <h1 class="title">Fine-Tuning zuhause: LoRA</h1>
+  <div class="cols" style="margin-top:26px;">
+    <div class="grow">
+      <div style="display:flex; align-items:center; gap:20px;">
+        <div class="card" style="flex:0 0 260px; padding:24px; text-align:center;">
+          <div style="font-size:19px; font-weight:700;">Basismodell</div>
+          <div style="font-size:13px; color:var(--muted); margin-top:3px;">4B Parameter · quantisiert</div>
+          <div class="mono" style="background:var(--term); border-radius:9px; padding:10px; margin:14px 24px 8px; font-weight:700; color:var(--muted); letter-spacing:.1em;">EINGEFROREN</div>
+          <div style="font-size:12.5px; font-style:italic; color:var(--faint);">0% trainiert</div>
+        </div>
+        <div style="font-size:34px; font-weight:700; color:var(--coral);">+</div>
+        <div style="text-align:center;">
+          <div style="background:var(--coral); color:var(--bg); border-radius:10px; width:84px; padding:14px 0; font-size:22px; font-weight:800;">A</div>
+          <div style="background:var(--coral); color:var(--bg); border-radius:10px; width:84px; padding:14px 0; font-size:22px; font-weight:800; margin-top:12px;">B</div>
+          <div style="font-size:12px; color:var(--muted); margin-top:10px; line-height:1.35;">ein paar kleinere Matrizen<br>~0,1–1% der Parameter</div>
+        </div>
+        <div style="font-size:34px; font-weight:700; color:var(--coral);">=</div>
+        <div class="card" style="flex:0 0 190px; padding:24px 18px; text-align:center; border:1.5px solid var(--coral);">
+          <div style="font-size:18px; font-weight:700;">Dein Modell</div>
+          <div style="font-size:13px; color:var(--muted); margin-top:6px;">eigener Stil,<br>gleiches Gehirn</div>
+        </div>
+      </div>
+      <div style="font-size:15px; margin-top:46px; line-height:1.5;">
+        <b style="color:var(--coral);">QLoRA:</b> <span style="color:var(--muted);">auf dem quantisierten Basismodell trainieren → Gemma 4 E4B lässt sich in ~8–12 GB fine-tunen — ein kostenloser Colab-T4 reicht (Unsloth).</span></div>
+    </div>
+    <div style="flex:0 0 320px; display:flex; flex-direction:column; gap:22px;">
+      <div class="card" style="padding:26px 28px; flex:1;">
+        <div style="font-size:16px; font-weight:700; color:var(--green); margin-bottom:10px;">LoRA kann</div>
+        <div style="font-size:15px; line-height:1.75;">Stil &amp; Ton<br>Ausgabeformat<br>Fachvokabular</div>
+      </div>
+      <div class="card" style="padding:26px 28px; flex:1;">
+        <div style="font-size:16px; font-weight:700; color:var(--red); margin-bottom:10px;">LoRA kann nicht</div>
+        <div style="font-size:15px; line-height:1.75;">neues Wissen in großem Umfang<br>neue Fähigkeiten</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">12</div>
+  <aside class="notes">Überleitung: „…aber es GIBT einen Trick, um Modelle zuhause anzupassen.“
+LoRA: die Basis-Gewichte einfrieren, zwei winzige Low-Rank-Matrizen daneben trainieren (~0,1–1% der Parameter). QLoRA = dasselbe auf einer quantisierten Basis → Fine-Tuning von Gemma 4 E4B passt in ~8–12 GB / kostenlosen Colab-T4.
+Demo-Plan: die LoRA VOR dem Vortrag trainieren (nicht live — zu langsam, zu fragil), das Unsloth-Notebook kurz zeigen, das Ergebnis in Ollama demonstrieren.
+TODO: den witzigen Datensatz festlegen + bauen (~100–500 Beispiele reichen für eine Stil-LoRA): Bielefelder Platt / Amtsdeutsch / CfB-Stil.</aside>
+</section>
+
+<!-- ============================================================ 13 · CAPABILITIES -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">11</text></svg>
+    <span class="lbl">Fähigkeiten</span>
+  </div>
+  <h1 class="title">Wähle das Modell für die Aufgabe — nicht das größte</h1>
+  <div class="cols">
+    <div class="card grow" style="padding:24px 30px;">
+      <div style="font-size:20px; font-weight:700;">Gemma 4 — sieht, hört, spricht Deutsch</div>
+      <div style="font-size:14px; font-style:italic; color:var(--coral); margin:4px 0 18px;">der multimodale Generalist</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">Foto eines Papierformulars → JSON</b><span>Formulare in strukturierte Daten scannen, komplett lokal</span></li>
+        <li><b style="font-size:16px;">140+ Sprachen, starkes Deutsch</b><span>12B Unified ergänzt Audio-Eingabe</span></li>
+        <li><b style="font-size:16px;">DSGVO-konform by Design</b><span>der Sweet Spot für Civic Tech / Verwaltung</span></li>
+      </ul>
+    </div>
+    <div class="card grow" style="padding:24px 30px;">
+      <div style="font-size:20px; font-weight:700;">Qwen 3.6 — schreibt ernsthaften Code</div>
+      <div style="font-size:14px; font-style:italic; color:var(--coral); margin:4px 0 18px;">der Spezialist fürs Coden</div>
+      <ul class="dots">
+        <li><b style="font-size:16px;">77.2% SWE-bench Verified</b><span>echte Repository-Bugs, Spitzenniveau</span></li>
+        <li><b style="font-size:16px;">Gleiche Aufgabe, direkt verglichen</b><span>Gemma E4B tut sich schwer — Qwen meistert es</span></li>
+        <li><b style="font-size:16px;">Lokaler GitHub Copilot</b><span>per Ollama einbinden — privater Code bleibt privat (ollama launch vscode)</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="card2" style="margin-top:22px; padding:20px 32px; font-size:16px;">
+    <b>Lobende Erwähnungen:</b> <span style="color:var(--muted);">Whisper (Sprache→Text, läuft überall) · kleine Embedding-Modelle (lokales RAG) · DeepSeek-R1 Reasoning</span>
+  </div>
+  <div class="pageno">13</div>
+  <aside class="notes">Botschaft: das Modell für die Aufgabe wählen, nicht das größte.
+Gemma-Demo: Foto eines Papierformulars / Fahrplans / einer handschriftlichen Notiz → strukturiertes JSON extrahieren, komplett lokal → „DSGVO-konformes Formular-Scannen“ ist der Civic-Tech-Aufhänger.
+Qwen-Demo (aufgezeichnet von größerer Hardware oder via API): eine echte Coding-Aufgabe, die beide Modelle versuchen — Gemma E4B tut sich schwer, Qwen meistert es.
+TODO: prüfen, ob Qwen 3.6 27B wirklich nur Text ist (manche Quellen nennen MMMU-Werte → deutet auf Vision hin?).
+Optional bei Zeit: Qwen in Cline/aider = „lokaler GitHub Copilot“.</aside>
+</section>
+
+<!-- ============================================================ 14 · WRAP-UP -->
+<section class="slide">
+  <div class="kicker">
+    <svg class="hex" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20"/><text x="22" y="25">12</text></svg>
+    <span class="lbl">Fazit</span>
+  </div>
+  <h1 class="title">Drei Dinge zum Mitnehmen</h1>
+  <div class="cols">
+    <div class="grow" style="display:flex; flex-direction:column; gap:16px;">
+      <div class="card" style="padding:18px 26px; display:flex; align-items:center; gap:20px;">
+        <svg class="hex" style="width:46px; height:42px; flex:0 0 auto;" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20" style="fill:none; stroke:var(--coral); stroke-width:2.4;"/><text x="22" y="26" style="fill:var(--coral); font:700 17px var(--mono); text-anchor:middle;">1</text></svg>
+        <div><div style="font-size:17.5px; font-weight:700;">Leistungsfähige LLMs laufen auf normalen Laptops — heute</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">Quantisierung (Q4) macht’s möglich; kleine neue Modelle schlagen große alte</div></div>
+      </div>
+      <div class="card" style="padding:18px 26px; display:flex; align-items:center; gap:20px;">
+        <svg class="hex" style="width:46px; height:42px; flex:0 0 auto;" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20" style="fill:none; stroke:var(--coral); stroke-width:2.4;"/><text x="22" y="26" style="fill:var(--coral); font:700 17px var(--mono); text-anchor:middle;">2</text></svg>
+        <div><div style="font-size:17.5px; font-weight:700;">Inferenz ist billig. Training ist astronomisch.</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">LoRA / QLoRA ist der Mittelweg — ein Modell auf einem kostenlosen Colab anpassen</div></div>
+      </div>
+      <div class="card" style="padding:18px 26px; display:flex; align-items:center; gap:20px;">
+        <svg class="hex" style="width:46px; height:42px; flex:0 0 auto;" viewBox="0 0 44 40"><polygon points="11,2 33,2 42,20 33,38 11,38 2,20" style="fill:none; stroke:var(--coral); stroke-width:2.4;"/><text x="22" y="26" style="fill:var(--coral); font:700 17px var(--mono); text-anchor:middle;">3</text></svg>
+        <div><div style="font-size:17.5px; font-weight:700;">Modellwahl = Passung zur Aufgabe</div>
+        <div style="font-size:13.5px; color:var(--muted); margin-top:3px;">Gemma 4 für Multimodal &amp; Deutsch · Qwen 3.6 für Code · Größe vs. Geschwindigkeit</div></div>
+      </div>
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>selbst ausprobieren — noch heute Abend</span></div>
+        <pre><span class="p">$ </span>ollama run gemma4:e4b        <span class="com"># ollama.com</span>
+<span class="com"># ein Befehl → läuft in 5 Minuten</span></pre>
+      </div>
+    </div>
+    <div class="card" style="flex:0 0 370px; padding:26px 30px; border:1px solid var(--coraldk); border-radius:16px; display:flex; flex-direction:column;">
+      <div style="font-size:21px; font-weight:700; line-height:1.3;">Ein Projekt für<br>Code for Bielefeld?</div>
+      <ul class="dots" style="margin-top:22px;">
+        <li><b style="font-size:15px;">Lokale Dokumenten-KI</b><span style="font-size:13px;">Papierformulare → strukturierte Daten</span></li>
+        <li><b style="font-size:15px;">RAG über das Ratsinformationssystem</b><span style="font-size:13px;">die Dokumente des Stadtrats befragen</span></li>
+        <li><b style="font-size:15px;">Alles DSGVO-konform</b><span style="font-size:13px;">läuft auf eigener Hardware</span></li>
+      </ul>
+      <div style="font-size:14.5px; font-style:italic; color:var(--coral); margin-top:auto;">Interesse? Sprecht mich danach an.</div>
+    </div>
+  </div>
+  <div class="pageno">14</div>
+  <aside class="notes">Fazit, ~2 Min. Die drei Kernaussagen setzen, dann die Einladung: ollama.com, ein Befehl, in fünf Minuten am Laufen.
+Mit der Projektidee für Code for Bielefeld schließen: lokale Dokumentenverarbeitung oder RAG über das Ratsinformationssystem — Interesse/Handzeichen für einen Folgeabend sammeln.</aside>
+</section>
+
+<!-- ============================================================ 15 · THANKS -->
+<section class="slide">
+  <div style="display:flex; flex-direction:column; align-items:center; height:100%; padding-top:26px;">
+    <div style="width:210px;"><svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg"
+     xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" x="0px" y="0px"
+     style="enable-background:new 0 0 162 162;" xml:space="preserve" id="svg1491"
+     sodipodi:docname="CodeFor-bielefeld.svg" inkscape:version="0.92.3 (2405546, 2018-03-11)"
+     viewBox="18.2 7.9 125.2 144">
+    <defs id="defs1495"></defs>
+    
+    <style type="text/css" id="style1274">	.st0{fill:#FF867F;}	.st1{fill:none;stroke:#FFFFFF;stroke-width:2;stroke-miterlimit:10;}	.st2{display:none;}	.st3{fill:#FFFFFF;}	.st4{fill:none;stroke:#FFFFFF;stroke-miterlimit:10;}	.st5{opacity:0;fill:none;stroke:#FFFFFF;stroke-width:2;stroke-miterlimit:10;}	.st6{fill:#FFFFFF;stroke:#FFFFFF;stroke-width:0.6;stroke-miterlimit:10;}</style>
+    <g id="Ebene_7" style="display:inline"></g>
+    <g id="Ebene_1" style="display:inline">	<g id="g1281">		<polygon class="st0"
+                                                                              points="28.4,110.1 28.4,49.7 80.9,19.4 133.4,49.7 133.4,110.1 80.9,140.4 "
+                                                                              id="polygon1277"
+                                                                              style="display:inline;fill:#ff867f"></polygon>
+        <path class="st0"
+              d="m 80.9,31 42.5,24.5 v 48.9 L 80.9,128.9 38.4,104.4 V 55.5 L 80.9,31 m 0,-23.1 -62.5,36 v 72 l 62.5,36 62.5,-36 v -72 z"
+              id="path1279" inkscape:connector-curvature="0" style="display:inline;fill:#ff867f"></path>	</g>
+        <polygon class="st1" points="81.1,147.7 22.6,113.8 22.6,46.2 81.1,12.3 139.6,46.2 139.6,113.8 " id="polygon1283"
+                 style="display:inline;fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polygon>
+        <g id="g1289" style="display:inline">		<rect x="95.699997" y="107.8" class="st0" width="1.4" height="1.9"
+                                                           id="rect1285" style="fill:#ff867f"></rect>
+            <polygon class="st0" points="97.1,109.7 97.1,107.8 95.7,107.8 95.7,109.7 " id="polygon1287"
+                     style="fill:#ff867f"></polygon>	</g>
+        <g id="g1295" style="display:inline">		<rect x="97.400002" y="126.7" class="st0" width="1.1" height="1.1"
+                                                           id="rect1291" style="fill:#ff867f"></rect>
+            <polygon class="st0" points="98.4,127.7 98.4,126.7 97.4,126.7 97.4,127.7 " id="polygon1293"
+                     style="fill:#ff867f"></polygon>	</g></g>
+    <g id="Ebene_3" class="st2" style="display:inline"></g>
+    <g id="Festes" style="display:inline"></g>
+    <g id="Bielefeld_x5F_Pfade" style="display:inline">	<polyline class="st1"
+                                                                     points="141.7,115.4 141.7,115.4 110.5,79.7 140.8,44.9 140.8,44.9  "
+                                                                     id="polyline1300"
+                                                                     style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+        <polyline class="st1" points="142.1,64.1 128.5,79.7 142.1,95.3  " id="polyline1302"
+                  style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+        <g id="g1366">		<g id="g1340">			<g id="g1338">				<path class="st3"
+                                                                                            d="m 77.5,43.4 c -0.3,-0.2 -0.5,-0.2 -0.7,-0.2 -0.4,0 -0.7,0.3 -0.7,0.8 v 0.3 h 1.8 V 45 h -1.8 v 3.8 H 75.4 V 45 h -1.3 v -0.7 h 1.3 V 44 c 0,-1.1 0.5,-1.5 1.4,-1.5 0.4,0 0.7,0.1 0.9,0.3 z"
+                                                                                            id="path1304"
+                                                                                            inkscape:connector-curvature="0"
+                                                                                            style="fill:#ffffff"></path>
+            <path class="st3"
+                  d="m 81.1,44.2 c 1.4,0 2.2,1.1 2.2,2.3 0,1.2 -0.8,2.3 -2.2,2.3 -1.4,0 -2.2,-1.1 -2.2,-2.3 0,-1.2 0.9,-2.3 2.2,-2.3 m 0,4 c 0.9,0 1.4,-0.8 1.4,-1.6 0,-0.9 -0.5,-1.6 -1.4,-1.6 -0.9,0 -1.5,0.8 -1.5,1.6 0.1,0.8 0.6,1.6 1.5,1.6"
+                  id="path1306" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+            <path class="st3"
+                  d="m 87.7,45.7 c -0.1,-0.5 -0.3,-0.8 -0.9,-0.8 -0.8,0 -1.5,0.7 -1.5,2.3 v 1.6 h -0.8 v -4.5 h 0.8 v 0.8 c 0.3,-0.5 0.9,-0.9 1.7,-0.9 0.9,0 1.4,0.5 1.5,1.5 z"
+                  id="path1308" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+            <g id="g1336">					<polygon class="st3"
+                                                       points="76.1,38.7 76.3,38.7 76.5,38.7 76.5,29.1 75.3,29.1 75.3,29.2 75.3,38.7 "
+                                                       id="polygon1310" style="fill:#ffffff"></polygon>
+                <path class="st3"
+                      d="m 80,39.6 c 0.1,0 0.2,-0.1 0.2,-0.2 V 28.2 C 80.2,28.1 80.1,28 80,28 h -3.8 c -0.1,0 -0.1,0 -0.1,0.1 v 0.2 0.8 c 0,0.1 0,0.2 0.1,0.2 h 2.6 c 0.1,0 0.2,0.1 0.2,0.1 v 8.9 c 0,0.1 -0.1,0.2 -0.2,0.2 h -2.6 c -0.1,0 -0.1,0 -0.1,0.1 v 0.2 0.8 c 0,0.1 0,0.2 0.1,0.2 H 80 Z"
+                      id="path1312" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <polygon class="st3" points="83,38.7 83,29.1 81.7,29.1 81.7,29.2 81.7,38.7 82.8,38.7 " id="polygon1314"
+                         style="fill:#ffffff"></polygon>
+                <path class="st3"
+                      d="m 82.8,39.6 v -1.2 c 1.7,0 2.8,-2.1 2.8,-4.6 0,-2.5 -1.2,-4.6 -2.8,-4.6 V 28 c 2.3,0 4,2.6 4,5.8 0,3.2 -1.7,5.8 -4,5.8"
+                      id="path1316" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 70.3,35.9 v 1.7 0.5 c 0,0.9 0.6,1.5 1.5,1.5 h 0.2 0.7 0.9 c 0,0 0.1,-0.1 0.1,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 H 72.6 72.2 72 c -0.4,0 -0.5,-0.2 -0.5,-0.6 V 37.5 36 35.1 c 0,-0.9 -0.4,-1.2 -0.8,-1.4 0.5,-0.2 0.8,-0.5 0.8,-1.4 v -0.6 -1.6 -0.4 c 0,-0.4 0.1,-0.6 0.5,-0.6 h 0.3 0.4 0.9 c 0,0 0.1,-0.1 0.1,-0.2 V 28 c 0,-0.1 -0.1,-0.2 -0.2,-0.2 h -0.7 -0.7 -0.4 c -0.9,0 -1.5,0.6 -1.5,1.5 v 0.7 2 c 0,0 0,0.5 -0.1,0.6 -0.1,0.4 -0.6,0.8 -0.9,0.8 h -0.5 c -0.1,0 -0.1,0.1 -0.1,0.1 v 0.9 c 0,0.1 0,0.2 0.1,0.2 h 0.4 c 0.4,0 0.9,0.3 0.9,0.8 0.3,0.1 0.3,0.5 0.3,0.5"
+                      id="path1318" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 76.3,28 h -0.4 -0.5 c -0.1,0 -0.1,0.1 -0.1,0.2 v 0.3 0.6 0.2 h 0.1 0.9 0.2 V 29.1 28.2 28 Z"
+                      id="path1320" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 75.3,38.6 v 0.4 0.5 c 0,0.1 0,0.2 0.1,0.2 h 0.3 0.6 0.2 v -0.2 -0.9 -0.1 h -0.2 -0.9 -0.1 c 0,-0.1 0,0.1 0,0.1 z"
+                      id="path1322" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 82.8,28 h -0.4 -0.5 c -0.1,0 -0.1,0.1 -0.1,0.2 v 0.3 0.6 0.2 h 0.1 0.9 0.2 V 29.1 28.2 28 Z"
+                      id="path1324" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 81.7,38.6 v 0.4 0.5 c 0,0.1 0,0.2 0.1,0.2 h 0.3 0.6 0.3 v -0.2 -0.9 -0.1 h -0.2 -0.9 -0.1 v 0.1 z"
+                      id="path1326" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 89.3,35.9 v 1.7 0.5 c 0,0.9 0.6,1.5 1.5,1.5 h 0.2 0.7 0.9 c 0,0 0.1,-0.1 0.1,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 H 91.6 91.2 91 c -0.4,0 -0.5,-0.2 -0.5,-0.6 V 37.5 36 35.1 c 0,-0.3 -0.1,-0.6 -0.2,-0.7 h -2 c 0.6,0.2 0.8,0.3 0.9,0.8 0.1,0.4 0.1,0.7 0.1,0.7"
+                      id="path1328" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 89.2,32.6 c -0.1,0.4 -0.4,0.6 -0.8,0.8 h 1.9 c 0.1,-0.3 0.2,-0.5 0.2,-0.9 v -0.6 -1.6 -0.4 c 0,-0.4 0.1,-0.6 0.5,-0.6 h 0.3 0.4 0.9 c 0,0 0.1,-0.1 0.1,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 h -0.7 -0.7 -0.4 c -0.9,0 -1.5,0.6 -1.5,1.5 v 0.4 2 c 0.1,-0.1 0.1,0.4 0,0.6"
+                      id="path1330" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 89.5,33.9 c 0.3,0.1 0.6,0.3 0.8,0.6 h 2.2 c 0.1,0 0.2,-0.1 0.2,-0.2 v -0.9 c 0,-0.1 -0.1,-0.1 -0.2,-0.1 h -2.3 c -0.1,0.3 -0.4,0.5 -0.7,0.6"
+                      id="path1332" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                <path class="st3"
+                      d="m 87.9,33.3 c -0.1,0 -0.1,0.1 -0.1,0.1 v 0.9 c 0,0.1 0,0.2 0.1,0.2 h 0.4 2 c -0.1,-0.3 -0.5,-0.5 -0.7,-0.6 0.3,-0.1 0.5,-0.3 0.6,-0.6 h -1.9 z"
+                      id="path1334" inkscape:connector-curvature="0" style="fill:#ffffff"></path>				</g>			</g>		</g>
+            <g id="g1364">			<rect x="55.5" y="51.700001" class="st4" width="50.900002" height="13.7"
+                                            id="rect1342" style="fill:none;stroke:#ffffff;stroke-miterlimit:10"></rect>
+                <g id="g1362">				<path class="st3"
+                                                    d="m 62.8,54.4 c 1.9,0 2.5,1.1 2.5,2.1 0,0.7 -0.4,1.3 -1.1,1.7 1,0.4 1.4,1.1 1.4,1.9 0,1.1 -0.7,2.3 -2.6,2.3 h -3.2 v -8 z m 1.3,2.2 c 0,-0.5 -0.2,-1.1 -1.3,-1.1 H 61 v 2.2 h 1.6 c 1,0 1.5,-0.5 1.5,-1.1 z m 0.3,3.5 c 0,-0.7 -0.3,-1.3 -1.7,-1.3 H 61 v 2.5 h 2.1 c 1,0 1.3,-0.7 1.3,-1.2 z"
+                                                    id="path1344" inkscape:connector-curvature="0"
+                                                    style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 66.9,54.9 c 0,-0.4 0.3,-0.7 0.7,-0.7 0.4,0 0.7,0.3 0.7,0.7 0,0.4 -0.3,0.7 -0.7,0.7 -0.4,0 -0.7,-0.3 -0.7,-0.7 z m 0.2,1.6 h 1.2 v 5.8 h -1.2 z"
+                          id="path1346" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 69.5,59.4 c 0,-1.9 1.1,-3.1 2.7,-3.1 1.4,0 2.5,0.9 2.5,2.7 0,0.3 0,0.6 0,0.8 h -3.9 c 0,1 0.7,1.6 1.5,1.6 0.5,0 0.9,-0.2 1.2,-0.6 l 0.8,0.8 c -0.4,0.5 -1.1,0.8 -2,0.8 -1.7,0.1 -2.8,-1 -2.8,-3 z m 4,-0.5 c 0,-1.1 -0.7,-1.5 -1.3,-1.5 -0.7,0 -1.4,0.4 -1.5,1.5 z"
+                          id="path1348" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3" d="m 76,54.7 1.2,-0.6 v 8.3 H 76 Z" id="path1350" inkscape:connector-curvature="0"
+                          style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 78.5,59.4 c 0,-1.9 1.1,-3.1 2.7,-3.1 1.4,0 2.5,0.9 2.5,2.7 0,0.3 0,0.6 0,0.8 h -3.9 c 0,1 0.7,1.6 1.5,1.6 0.5,0 0.9,-0.2 1.2,-0.6 l 0.8,0.8 c -0.4,0.5 -1.1,0.8 -2,0.8 -1.8,0.1 -2.8,-1 -2.8,-3 z m 4,-0.5 c 0,-1.1 -0.7,-1.5 -1.3,-1.5 -0.7,0 -1.4,0.4 -1.5,1.5 z"
+                          id="path1352" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 86.5,62.4 h -1.2 v -4.8 h -0.9 v -1 h 0.9 v -0.9 c 0,-1.1 0.7,-1.4 1.3,-1.4 0.5,0 0.8,0.1 1.2,0.3 v 1 c -0.4,-0.1 -0.6,-0.2 -0.8,-0.2 -0.4,0 -0.5,0.2 -0.5,0.5 v 0.7 h 1.3 v 1 h -1.3 z"
+                          id="path1354" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 88.2,59.4 c 0,-1.9 1.1,-3.1 2.7,-3.1 1.4,0 2.5,0.9 2.5,2.7 0,0.3 0,0.6 0,0.8 h -3.9 c 0,1 0.7,1.6 1.5,1.6 0.5,0 0.9,-0.2 1.2,-0.6 l 0.8,0.8 c -0.4,0.5 -1.1,0.8 -2,0.8 -1.7,0.1 -2.8,-1 -2.8,-3 z m 4,-0.5 c 0,-1.1 -0.7,-1.5 -1.3,-1.5 -0.7,0 -1.4,0.4 -1.5,1.5 z"
+                          id="path1356" inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3" d="m 94.7,54.7 1.2,-0.6 v 8.3 h -1.2 z" id="path1358"
+                          inkscape:connector-curvature="0" style="fill:#ffffff"></path>
+                    <path class="st3"
+                          d="m 97.2,59.4 c 0,-1.9 1,-3.1 2.4,-3.1 0.6,0 1.1,0.2 1.4,0.5 v -2.3 l 1.2,-0.5 v 8.3 H 101 v -0.4 c -0.3,0.3 -0.7,0.5 -1.4,0.5 -1.5,0.1 -2.4,-1 -2.4,-3 z m 3.8,1.3 v -2.6 c -0.2,-0.3 -0.6,-0.6 -1.2,-0.6 -0.9,0 -1.4,0.7 -1.4,1.9 0,1.1 0.5,1.9 1.4,1.9 0.5,0.1 0.9,-0.2 1.2,-0.6 z"
+                          id="path1360" inkscape:connector-curvature="0" style="fill:#ffffff"></path>			</g>		</g>	</g>
+        <path class="st5" d="M 64.5,140.7 67.3,86 c 2.8,0 8.5,0 27.3,0 l 2.8,54.7 -16.3,7 z" id="path1368"
+              inkscape:connector-curvature="0"
+              style="opacity:0;fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></path>
+        <g id="g1374">		<polyline class="st1" points="20.4,115.4 51.7,79.6 20.5,43.8   " id="polyline1370"
+                                        style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="19.7,95.7 33.7,79.6 19.2,62.9   " id="polyline1372"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>	</g>
+        <path class="st1" d="M 142.1,95.3" id="path1376" inkscape:connector-curvature="0"
+              style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></path>
+        <path class="st1" d="M 142.1,64.1" id="path1378" inkscape:connector-curvature="0"
+              style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></path>
+        <g id="g1388">		<line class="st1" x1="109.2" y1="102.3" x2="109.2" y2="133" id="line1380"
+                                    style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></line>
+            <polyline class="st1" points="101.8,110.4 109.2,101.1 116.7,110.4   " id="polyline1382"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="101.8,116.8 109.2,107.4 116.7,116.8   " id="polyline1384"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="101.8,123.3 109.2,113.9 116.7,123.3   " id="polyline1386"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>	</g>
+        <g id="g1396">		<line class="st1" x1="52.299999" y1="113.9" x2="52.299999" y2="134" id="line1390"
+                                    style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></line>
+            <polyline class="st1" points="44.9,122 52.3,112.6 59.9,122   " id="polyline1392"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>
+            <polyline class="st1" points="44.9,128.4 52.3,119 59.9,128.4   " id="polyline1394"
+                      style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polyline>	</g></g>
+    <g id="Ebene_5" style="display:inline">	<g id="g1401">		<path class="st0"
+                                                                           d="m 80.9,11.5 59.4,34.2 v 68.4 L 80.9,148.3 21.5,114.1 V 45.7 L 80.9,11.5 m 0,-3.6 -62.5,36 v 72 l 62.5,36 62.5,-36 v -72 z"
+                                                                           id="path1399"
+                                                                           inkscape:connector-curvature="0"
+                                                                           style="fill:#ff867f"></path>	</g></g>
+    <g id="Ebene_6" style="display:inline">	<polygon class="st1"
+                                                        points="139.6,113.8 81.1,147.7 22.6,113.8 22.6,46.2 81.1,12.3 139.6,46.2 "
+                                                        id="polygon1404"
+                                                        style="fill:none;stroke:#ffffff;stroke-width:2;stroke-miterlimit:10"></polygon>
+        <g id="g1488">		<g id="g1408">			<path class="st6"
+                                                              d="m 78.1,101.3 c 0,-1.8 0.6,-4.3 2.9,-4.3 2.3,0 2.9,2.3 2.9,4.3 0,1.8 -0.6,4.3 -2.9,4.3 -2.3,0 -2.9,-2.2 -2.9,-4.3 z m 4.7,0 c 0,-1.7 -0.4,-3.4 -1.8,-3.4 -1.5,0 -1.9,1.9 -1.9,3.4 0,1.7 0.4,3.4 1.9,3.4 1.5,-0.1 1.8,-1.9 1.8,-3.4 z"
+                                                              id="path1406" inkscape:connector-curvature="0"
+                                                              style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1412">			<path class="st6"
+                                            d="m 78,117.5 c 0,-1.9 0.6,-4.3 3,-4.3 2.3,0 3,2.3 3,4.3 0,1.9 -0.6,4.3 -3,4.3 -2.3,0.1 -3,-2.2 -3,-4.3 z m 4.7,0 c 0,-1.6 -0.4,-3.1 -1.7,-3.1 -1.4,0 -1.7,1.7 -1.7,3.1 0,1.6 0.4,3.1 1.7,3.1 1.4,0.1 1.7,-1.6 1.7,-3.1 z"
+                                            id="path1410" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1416">			<path class="st6"
+                                            d="m 78,134 c 0,-1.9 0.6,-4.3 3,-4.3 2.3,0 3,2.3 3,4.3 0,1.9 -0.6,4.3 -3,4.3 -2.3,0 -3,-2.3 -3,-4.3 z m 4.7,0 c 0,-1.6 -0.4,-3.1 -1.7,-3.1 -1.4,0 -1.7,1.7 -1.7,3.1 0,1.6 0.4,3.1 1.7,3.1 1.4,0 1.7,-1.7 1.7,-3.1 z"
+                                            id="path1414" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1420">			<path class="st6"
+                                            d="m 94.1,90.5 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1418" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1424">			<path class="st6"
+                                            d="m 95.1,100.5 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1422" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1428">			<path class="st6"
+                                            d="m 96.1,110.6 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1426" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1432">			<path class="st6"
+                                            d="M 97.1,120.7 H 95.7 V 120 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.4 h -1 v -6.7 z"
+                                            id="path1430" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1436">			<path class="st6"
+                                            d="m 98.1,130.8 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 v 8.6 l -1,0.7 v -7.6 z"
+                                            id="path1434" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1440">			<path class="st6"
+                                            d="m 93.9,76.3 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 H 95 V 83 h -1 v -6.7 z"
+                                            id="path1438" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <path class="st6" d="m 89.4,83 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 89.5 V 83 Z" id="path1442"
+                  inkscape:connector-curvature="0"
+                  style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>
+            <g id="g1446">			<path class="st6"
+                                            d="m 72.8,76.3 h -1.4 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 V 83 h -1 v -6.7 z"
+                                            id="path1444" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1450">			<path class="st6"
+                                            d="m 68.3,83 h -1 V 74.6 H 68 c 0.3,0.8 0.9,1 1.7,1 v 0.7 h -1.4 z"
+                                            id="path1448" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1454">			<path class="st6"
+                                            d="M 83.4,76.3 H 82 v -0.7 c 0.8,0 1.4,-0.2 1.7,-1 h 0.8 V 83 h -1 v -6.7 z"
+                                            id="path1452" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1458">			<path class="st6"
+                                            d="m 78.7,83 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 78.8 V 83 Z"
+                                            id="path1456" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1462">			<path class="st6"
+                                            d="m 67.9,85.7 v 1.4 h -0.7 c 0,-0.8 -0.2,-1.4 -1,-1.7 v -0.8 h 8.4 v 1 h -6.7 z"
+                                            id="path1460" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1466">			<path class="st6"
+                                            d="m 87.4,85.7 v -1 h 8.4 v 0.8 c -0.8,0.3 -1,0.9 -1,1.7 h -0.7 v -1.4 h -6.7 z"
+                                            id="path1464" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1470">			<path class="st6"
+                                            d="m 68,97.2 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 68 Z"
+                                            id="path1468" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1474">			<path class="st6"
+                                            d="m 67,107.3 h -1 v -8.4 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 67 Z"
+                                            id="path1472" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1478">			<path class="st6"
+                                            d="M 66,117.3 H 65 V 109 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 66 Z"
+                                            id="path1476" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1482">			<path class="st6"
+                                            d="M 65,127.4 H 64 V 119 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 65 Z"
+                                            id="path1480" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>
+            <g id="g1486">			<path class="st6"
+                                            d="m 64,138.3 -1,-0.5 v -8.7 h 0.8 c 0.3,0.8 0.9,1 1.7,1 v 0.7 H 64 Z"
+                                            id="path1484" inkscape:connector-curvature="0"
+                                            style="fill:#ffffff;stroke:#ffffff;stroke-width:0.60000002;stroke-miterlimit:10"></path>		</g>	</g></g></svg>
+</div>
+    <div style="font-size:46px; font-weight:800; margin-top:26px;">Danke! — Fragen?</div>
+    <div style="font-size:16px; font-style:italic; color:var(--coral); margin-top:12px;">Das Terminal ist noch offen — fragt, und wir probieren es live.</div>
+    <div style="display:flex; gap:70px; margin-top:44px;">
+      <div>
+        <div style="font-size:11.5px; font-weight:700; letter-spacing:.08em; color:var(--faint); margin-bottom:10px;">QUELLEN</div>
+        <div class="src">Google — Gemma-4-Ankündigung (blog.google)</div>
+        <div class="src">Unsloth — Gemma-4-Fine-Tuning-Doku (unsloth.ai)</div>
+        <div class="src">Ollama-Modell-Bibliothek (ollama.com/library)</div>
+        <div class="src">The Decoder — Qwen 3.6-27B vs. 397B-Vorgänger</div>
+      </div>
+      <div style="padding-top:21px;">
+        <div class="src">llm-stats.com — Qwen-3.6-27B-Benchmarks</div>
+        <div class="src">corelab.tech — LLM-GPU-Kaufberatung (Apr 2026)</div>
+        <div class="src">modemguides.com — Ryzen AI Max 395 Realitätscheck</div>
+        <div class="src">pinggy.io — Hardware für selbst gehostete LLMs, 2026</div>
+      </div>
+    </div>
+    <style>.src { font-size:13px; color:var(--muted); margin-bottom:8px; }</style>
+  </div>
+  <aside class="notes">Q&amp;A. Quellen für die Nachbereitungs-E-Mail / das Repo gelistet.
+Das Terminal offen lassen — die besten Q&amp;A-Antworten sind Live-Demos.</aside>
+</section>
+
+</div></div>
+
+<div id="hud"><span><b>←/→</b> Folien</span><span><b>F</b> Vollbild</span><span><b>N</b> Notizen</span><span id="counter"></span></div>
+<div id="notes"><h3>Sprechernotizen</h3><div id="notesbody"></div></div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var deck = document.getElementById('deck');
+  var counter = document.getElementById('counter');
+  var notesEl = document.getElementById('notes');
+  var notesBody = document.getElementById('notesbody');
+  var i = 0;
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('active', k === i); });
+    if (history.replaceState) history.replaceState(null, '', '#' + (i + 1));
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    var a = slides[i].querySelector('aside.notes');
+    notesBody.textContent = a ? a.textContent.trim() : '(keine Notizen)';
+  }
+  function fit() {
+    var s = Math.min(window.innerWidth / 1300, window.innerHeight / 760);
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') { show(i + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') { show(i - 1); e.preventDefault(); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen();
+    }
+    else if (e.key === 'n' || e.key === 'N') notesEl.classList.toggle('on');
+  });
+  document.getElementById('stage').addEventListener('click', function (e) {
+    if (window.getSelection().toString()) return;
+    show(e.clientX > window.innerWidth / 2 ? i + 1 : i - 1);
+  });
+  window.addEventListener('resize', fit);
+  var h = parseInt((location.hash || '').replace('#', ''), 10);
+  fit();
+  show(isNaN(h) ? 0 : h - 1);
+})();
+</script>
+</body>
+</html>
