@@ -162,5 +162,3 @@ gemma4:e2b          15.4 tok/s      1279 tokens
 gemma4:e4b          8.8 tok/s       1924 tokens     
 gemma4:12b          3.7 tok/s       1583 tokens     
 ====================================================
-
-Expect: speed drops and quality rises as the model gets bigger.
